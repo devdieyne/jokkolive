@@ -1,0 +1,122 @@
+### tiktok-live-commerce — Collection REST Client
+### Importer dans VS Code avec l'extension "REST Client"
+
+@baseUrl = http://localhost:3000
+@sellerId = default-seller
+
+# ─────────────────────────────────────────
+# PRODUCTS
+# ─────────────────────────────────────────
+
+### Créer un produit
+POST {{baseUrl}}/products
+Content-Type: application/json
+
+{
+  "sellerId": "{{sellerId}}",
+  "name": "Robe wax rouge",
+  "priceFCFA": 15000,
+  "keywords": ["robe", "wax", "coton"],
+  "variants": [
+    { "name": "taille", "options": ["S", "M", "L", "XL"] },
+    { "name": "couleur", "options": ["rouge", "bleu", "vert"] }
+  ],
+  "stock": 20
+}
+
+### Lister les produits du vendeur
+GET {{baseUrl}}/products?sellerId={{sellerId}}
+
+### Détail d'un produit
+# @name getProduct
+GET {{baseUrl}}/products/PRODUCT_ID_ICI
+
+### Modifier un produit
+PATCH {{baseUrl}}/products/PRODUCT_ID_ICI
+Content-Type: application/json
+
+{
+  "priceFCFA": 12000,
+  "stock": 15
+}
+
+### Supprimer un produit
+DELETE {{baseUrl}}/products/PRODUCT_ID_ICI
+
+
+# ─────────────────────────────────────────
+# LIVE
+# ─────────────────────────────────────────
+
+### Démarrer un live TikTok
+POST {{baseUrl}}/live/start
+Content-Type: application/json
+
+{
+  "sellerId": "{{sellerId}}",
+  "tiktokUsername": "nom_utilisateur_tiktok"
+}
+
+### Définir le produit en vedette
+POST {{baseUrl}}/live/current-product
+Content-Type: application/json
+
+{
+  "sellerId": "{{sellerId}}",
+  "productId": "PRODUCT_ID_ICI"
+}
+
+### Récupérer la session active
+GET {{baseUrl}}/live/active/{{sellerId}}
+
+### Historique des sessions (paginé)
+GET {{baseUrl}}/live/sessions/{{sellerId}}?limit=10&skip=0
+
+### Arrêter le live
+POST {{baseUrl}}/live/stop
+Content-Type: application/json
+
+{
+  "sellerId": "{{sellerId}}"
+}
+
+
+# ─────────────────────────────────────────
+# ORDERS
+# ─────────────────────────────────────────
+
+### Lister toutes les commandes
+GET {{baseUrl}}/orders?sellerId={{sellerId}}
+
+### Filtrer par session
+GET {{baseUrl}}/orders?sellerId={{sellerId}}&liveSessionId=SESSION_ID_ICI
+
+### Filtrer par statut
+GET {{baseUrl}}/orders?sellerId={{sellerId}}&status=captured
+
+### Détail d'une commande
+GET {{baseUrl}}/orders/ORDER_ID_ICI
+
+### Modifier une commande (téléphone, quantité, variante)
+PATCH {{baseUrl}}/orders/ORDER_ID_ICI
+Content-Type: application/json
+
+{
+  "buyerPhone": "771234567",
+  "quantity": 2,
+  "variant": { "taille": "M", "couleur": "rouge" }
+}
+
+### Confirmer une commande
+POST {{baseUrl}}/orders/ORDER_ID_ICI/confirm
+Content-Type: application/json
+
+{
+  "buyerPhone": "771234567"
+}
+
+### Annuler une commande
+POST {{baseUrl}}/orders/ORDER_ID_ICI/cancel
+
+### Exporter les commandes d'une session en CSV
+GET {{baseUrl}}/orders/export/SESSION_ID_ICI.csv
