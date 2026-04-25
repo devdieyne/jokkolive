@@ -324,6 +324,67 @@
       letter-spacing: 0.04em;
     }
 
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 420px;
+      margin: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .modal h2 { font-size: 1.1rem; margin-bottom: 16px; }
+
+    .form-group { margin-bottom: 12px; }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: #6366f1; }
+
+    .form-group textarea { min-height: 60px; resize: vertical; }
+
+    .form-hint {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-top: 3px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      justify-content: flex-end;
+    }
+
     /* ── TOAST ── */
     #toast {
       position: fixed;
@@ -386,6 +447,10 @@
     <div class="panel">
       <div class="panel-title">
         📦 Produits — tapez pour mettre en vedette
+        <button class="btn btn-slate" style="margin-left:auto;padding:3px 12px;font-size:0.78rem"
+          onclick="document.getElementById('modal-product').classList.add('open')">
+          + Nouveau produit
+        </button>
       </div>
       <div id="product-grid">
         <div class="no-data">Chargement des produits...</div>
@@ -416,6 +481,50 @@
 </main>
 
 <div id="toast"></div>
+
+<!-- ── MODAL CRÉATION PRODUIT ── -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <h2>📦 Nouveau produit</h2>
+
+    <div class="form-group">
+      <label>Nom du produit *</label>
+      <input id="p-name" placeholder="ex: Robe wax rouge" />
+    </div>
+
+    <div class="form-group">
+      <label>Prix (FCFA) *</label>
+      <input id="p-price" type="number" placeholder="15000" />
+    </div>
+
+    <div class="form-group">
+      <label>Stock</label>
+      <input id="p-stock" type="number" placeholder="0" />
+    </div>
+
+    <div class="form-group">
+      <label>Mots-clés</label>
+      <input id="p-keywords" placeholder="robe, wax, coton" />
+      <div class="form-hint">Séparés par des virgules — aident l'IA à mieux matcher</div>
+    </div>
+
+    <div class="form-group">
+      <label>Variantes</label>
+      <textarea id="p-variants" placeholder="taille: S, M, L, XL&#10;couleur: rouge, bleu, noir"></textarea>
+      <div class="form-hint">Une variante par ligne : <strong>nom: option1, option2</strong></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-slate"
+        onclick="document.getElementById('modal-product').classList.remove('open')">
+        Annuler
+      </button>
+      <button class="btn btn-indigo" onclick="createProduct()">
+        Créer le produit
+      </button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
@@ -705,6 +814,51 @@
         updateOrderStats();
       }
     } catch (_) { /* pas de session active */ }
+  }
+
+  // ── Création produit ──
+  async function createProduct() {
+    const name  = document.getElementById('p-name').value.trim();
+    const price = parseInt(document.getElementById('p-price').value);
+    const stock = parseInt(document.getElementById('p-stock').value) || 0;
+
+    if (!name)  { toast('⚠️ Entrez un nom de produit'); return; }
+    if (!price) { toast('⚠️ Entrez un prix'); return; }
+
+    const keywords = document.getElementById('p-keywords').value
+      .split(',').map(k => k.trim()).filter(Boolean);
+
+    const variantLines = document.getElementById('p-variants').value
+      .split('\n').map(l => l.trim()).filter(Boolean);
+
+    const variants = variantLines.map(line => {
+      const [namePart, optionsPart] = line.split(':');
+      return {
+        name: namePart?.trim() ?? '',
+        options: (optionsPart ?? '').split(',').map(o => o.trim()).filter(Boolean),
+      };
+    }).filter(v => v.name && v.options.length);
+
+    try {
+      await api('POST', '/products', {
+        sellerId: SELLER_ID,
+        name,
+        priceFCFA: price,
+        stock,
+        keywords,
+        variants,
+      });
+
+      // Réinitialiser le formulaire
+      ['p-name','p-price','p-stock','p-keywords','p-variants']
+        .forEach(id => document.getElementById(id).value = '');
+
+      document.getElementById('modal-product').classList.remove('open');
+      toast(`✅ Produit "${name}" créé`);
+      await loadProducts();
+    } catch (e) {
+      toast(`❌ ${e.message}`);
+    }
   }
 
   init();
