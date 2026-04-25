@@ -4,12 +4,10 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
-  OnGatewayInit,
 } from '@nestjs/websockets';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { ConfigService } from '@nestjs/config';
 
 interface SellerJoinPayload {
   sellerId: string;
@@ -19,19 +17,11 @@ interface SellerJoinPayload {
   namespace: '/live',
   cors: { origin: '*' },
 })
-export class EventsGateway implements OnGatewayInit {
+export class EventsGateway {
   private readonly logger = new Logger(EventsGateway.name);
 
   @WebSocketServer()
   server!: Server;
-
-  constructor(private readonly configService: ConfigService) {}
-
-  afterInit() {
-    const corsOrigin = this.configService.get<string>('cors.origin') ?? '*';
-    this.server.engine.opts.cors = { origin: corsOrigin };
-    this.logger.log('Socket.IO Gateway /live initialisé');
-  }
 
   @SubscribeMessage('seller:join')
   handleSellerJoin(
