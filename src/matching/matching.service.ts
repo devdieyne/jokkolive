@@ -34,8 +34,9 @@ interface AiAnalysis {
 }
 
 function isEmojiOnly(text: string): boolean {
-  const withoutEmoji = text.replace(/\p{Emoji}/gu, '').trim();
-  return withoutEmoji.length === 0;
+  // True si le texte ne contient aucune lettre ni chiffre (unicode-aware)
+  // Couvre emojis + variation selectors + ponctuation pure
+  return !/[\p{L}\p{N}]/u.test(text.trim());
 }
 
 @Injectable()
