@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "02-schemas.ts",
+    "03-live.service.ts",
+    "04-matching.service.ts",
+    "05-gateway-controller.ts"
+  ]
+}
