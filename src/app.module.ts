@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { LiveModule } from './live/live.module';
 import { MatchingModule } from './matching/matching.module';
 import { OrdersModule } from './orders/orders.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { OrdersModule } from './orders/orders.module';
     LiveModule,
     MatchingModule,
     OrdersModule,
+    EventsModule,
   ],
   providers: [
     {
