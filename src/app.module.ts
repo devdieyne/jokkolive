@@ -7,6 +7,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { ProductsModule } from './products/products.module';
 import { LiveModule } from './live/live.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { LiveModule } from './live/live.module';
     ]),
     ProductsModule,
     LiveModule,
+    MatchingModule,
   ],
   providers: [
     {
