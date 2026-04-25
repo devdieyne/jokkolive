@@ -8,6 +8,7 @@ import configuration from './config/configuration';
 import { ProductsModule } from './products/products.module';
 import { LiveModule } from './live/live.module';
 import { MatchingModule } from './matching/matching.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { MatchingModule } from './matching/matching.module';
     ProductsModule,
     LiveModule,
     MatchingModule,
+    OrdersModule,
   ],
   providers: [
     {
