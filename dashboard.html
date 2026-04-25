@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok Live Commerce — Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #1e293b;
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    header h1 { font-size: 1rem; font-weight: 700; flex: 0 0 auto; }
+
+    #live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      background: #374151;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    #live-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #6b7280;
+      transition: background 0.3s;
+    }
+    #live-dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
+    #live-dot.error  { background: #ef4444; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #username-input {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.9rem;
+      width: 180px;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-green  { background: #22c55e; color: white; }
+    .btn-red    { background: #ef4444; color: white; }
+    .btn-indigo { background: #6366f1; color: white; }
+    .btn-slate  { background: #475569; color: white; }
+
+    #order-count-badge {
+      background: #f59e0b;
+      color: white;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-left: auto;
+    }
+
+    /* ── LAYOUT ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── PRODUITS ── */
+    #product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .product-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      position: relative;
+      background: white;
+    }
+
+    .product-card:hover { border-color: #6366f1; transform: translateY(-1px); }
+
+    .product-card.active {
+      border-color: #22c55e;
+      background: #f0fdf4;
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+    }
+
+    .product-card .star {
+      position: absolute;
+      top: 8px; right: 8px;
+      font-size: 0.75rem;
+      background: #22c55e;
+      color: white;
+      padding: 1px 6px;
+      border-radius: 10px;
+      display: none;
+    }
+    .product-card.active .star { display: block; }
+
+    .product-card .product-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .product-card .product-price {
+      color: #6366f1;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .product-card .product-variants {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .no-data {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* ── ORDERS ── */
+    #order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .order-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .order-card.needs-review { border-color: #f59e0b; background: #fffbeb; }
+    .order-card.confirmed    { border-color: #22c55e; background: #f0fdf4; }
+    .order-card.cancelled    { opacity: 0.5; }
+
+    .order-buyer {
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .order-buyer a {
+      color: #6366f1;
+      text-decoration: none;
+    }
+    .order-buyer a:hover { text-decoration: underline; }
+
+    .confidence-badge {
+      font-size: 0.72rem;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .conf-high   { background: #dcfce7; color: #166534; }
+    .conf-medium { background: #fef9c3; color: #854d0e; }
+    .conf-low    { background: #fee2e2; color: #991b1b; }
+
+    .order-detail {
+      font-size: 0.8rem;
+      color: #475569;
+      margin: 3px 0;
+    }
+
+    .order-phone {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .btn-sm {
+      padding: 3px 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-sm:hover { opacity: 0.8; }
+    .btn-confirm { background: #dcfce7; color: #166534; }
+    .btn-cancel  { background: #fee2e2; color: #991b1b; }
+    .btn-tiktok  { background: #e0e7ff; color: #4338ca; }
+
+    /* ── COMMENTS ── */
+    #comment-feed {
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .comment-item {
+      font-size: 0.82rem;
+      padding: 5px 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border-left: 3px solid #e2e8f0;
+      animation: slideIn 0.2s ease;
+    }
+
+    .comment-author {
+      font-weight: 700;
+      color: #6366f1;
+    }
+
+    /* ── STATS ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1e293b;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 999;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <h1>🎬 Live Commerce</h1>
+
+  <div id="live-badge">
+    <div id="live-dot"></div>
+    <span id="live-status-text">Hors ligne</span>
+  </div>
+
+  <input id="username-input" placeholder="@username TikTok" />
+  <button class="btn btn-green"  id="btn-start">▶ Démarrer</button>
+  <button class="btn btn-red"    id="btn-stop" disabled>⏹ Arrêter</button>
+  <button class="btn btn-indigo" id="btn-export" disabled>⬇ Export CSV</button>
+
+  <div id="order-count-badge">0 commandes</div>
+</header>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- COLONNE GAUCHE : produits + stats -->
+  <section>
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-orders">0</div>
+        <div class="stat-label">Commandes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-comments">0</div>
+        <div class="stat-label">Commentaires</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-review">0</div>
+        <div class="stat-label">À valider</div>
+      </div>
+    </div>
+
+    <!-- Produits -->
+    <div class="panel">
+      <div class="panel-title">
+        📦 Produits — tapez pour mettre en vedette
+      </div>
+      <div id="product-grid">
+        <div class="no-data">Chargement des produits...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLONNE DROITE : commandes + commentaires -->
+  <section>
+
+    <!-- Commandes -->
+    <div class="panel">
+      <div class="panel-title">🛒 Commandes en temps réel</div>
+      <div id="order-list">
+        <div class="no-data">Aucune commande encore</div>
+      </div>
+    </div>
+
+    <!-- Commentaires -->
+    <div class="panel">
+      <div class="panel-title">💬 Commentaires live</div>
+      <div id="comment-feed">
+        <div class="no-data">En attente du live...</div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const API = 'http://localhost:3000';
+  const SELLER_ID = 'default-seller';
+
+  // ── État local ──
+  let activeSessionId = null;
+  let currentProductId = null;
+  let orderCount = 0;
+  let commentCount = 0;
+  let reviewCount = 0;
+
+  // ── Toast ──
+  function toast(msg, duration = 2500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  // ── Socket.IO ──
+  const socket = io(`${API}/live`, { transports: ['websocket'] });
+
+  socket.on('connect', () => {
+    socket.emit('seller:join', { sellerId: SELLER_ID });
+  });
+
+  socket.on('live:status', (data) => {
+    const dot = document.getElementById('live-dot');
+    const txt = document.getElementById('live-status-text');
+    if (data.status === 'connected') {
+      dot.className = 'active';
+      txt.textContent = `En live · Room ${data.roomId}`;
+    } else {
+      dot.className = 'error';
+      txt.textContent = 'Déconnecté TikTok';
+    }
+  });
+
+  socket.on('live:comment', (data) => {
+    commentCount++;
+    document.getElementById('stat-comments').textContent = commentCount;
+    addComment(data);
+  });
+
+  socket.on('order:new', (data) => {
+    orderCount++;
+    if (data.needsReview) reviewCount++;
+    updateOrderStats();
+    addOrder(data);
+    toast(`✅ Commande @${data.buyer.uniqueId}`);
+  });
+
+  socket.on('live:product-changed', (data) => {
+    currentProductId = data.productId;
+    highlightProduct(data.productId);
+  });
+
+  socket.on('live:ended', () => {
+    setLiveUIStopped();
+  });
+
+  // ── API helpers ──
+  async function api(method, path, body) {
+    const res = await fetch(`${API}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || res.statusText);
+    }
+    return res.json();
+  }
+
+  // ── Produits ──
+  async function loadProducts() {
+    const products = await api('GET', `/products?sellerId=${SELLER_ID}`);
+    renderProducts(products);
+  }
+
+  function renderProducts(products) {
+    const grid = document.getElementById('product-grid');
+    if (!products.length) {
+      grid.innerHTML = '<div class="no-data">Aucun produit — créez-en via l\'API</div>';
+      return;
+    }
+    grid.innerHTML = products.map(p => {
+      const variants = p.variants.map(v => `${v.name}: ${v.options.join(', ')}`).join(' · ');
+      return `
+        <div class="product-card" data-id="${p._id}" onclick="selectProduct('${p._id}')">
+          <span class="star">EN VEDETTE</span>
+          <div class="product-name">${p.name}</div>
+          <div class="product-price">${p.priceFCFA.toLocaleString()} FCFA</div>
+          ${variants ? `<div class="product-variants">${variants}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    if (currentProductId) highlightProduct(currentProductId);
+  }
+
+  async function selectProduct(productId) {
+    if (!activeSessionId) {
+      toast('⚠️ Démarrez le live d\'abord');
+      return;
+    }
+    try {
+      await api('POST', '/live/current-product', { sellerId: SELLER_ID, productId });
+      currentProductId = productId;
+      highlightProduct(productId);
+      const card = document.querySelector(`.product-card[data-id="${productId}"] .product-name`);
+      toast(`📦 En vedette : ${card?.textContent ?? productId}`);
+    } catch (e) {
+      toast(`❌ ${e.message}`);
+    }
+  }
+
+  function highlightProduct(productId) {
+    document.querySelectorAll('.product-card').forEach(el => {
+      el.classList.toggle('active', el.dataset.id === productId);
+    });
+  }
+
+  // ── Live controls ──
+  document.getElementById('btn-start').addEventListener('click', async () => {
+    const username = document.getElementById('username-input').value.trim().replace('@', '');
+    if (!username) { toast('⚠️ Entrez un username TikTok'); return; }
+
+    try {
+      document.getElementById('btn-start').disabled = true;
+      const session = await api('POST', '/live/start', { sellerId: SELLER_ID, tiktokUsername: username });
+      activeSessionId = session.sessionId;
+
+      document.getElementById('live-dot').className = 'active';
+      document.getElementById('live-status-text').textContent = 'Connexion en cours...';
+      document.getElementById('btn-stop').disabled = false;
+      document.getElementById('btn-export').disabled = false;
+      toast('🔌 Connexion TikTok en cours...');
+    } catch (e) {
+      document.getElementById('btn-start').disabled = false;
+      toast(`❌ ${e.message}`);
+    }
+  });
+
+  document.getElementById('btn-stop').addEventListener('click', async () => {
+    if (!confirm('Arrêter le live ?')) return;
+    try {
+      await api('POST', '/live/stop', { sellerId: SELLER_ID });
+      setLiveUIStopped();
+      toast('⏹ Live arrêté');
+    } catch (e) {
+      toast(`❌ ${e.message}`);
+    }
+  });
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    if (!activeSessionId) return;
+    window.open(`${API}/orders/export/${activeSessionId}.csv`, '_blank');
+  });
+
+  function setLiveUIStopped() {
+    document.getElementById('live-dot').className = '';
+    document.getElementById('live-status-text').textContent = 'Hors ligne';
+    document.getElementById('btn-start').disabled = false;
+    document.getElementById('btn-stop').disabled = true;
+    highlightProduct(null);
+    currentProductId = null;
+  }
+
+  // ── Commandes ──
+  function updateOrderStats() {
+    document.getElementById('stat-orders').textContent = orderCount;
+    document.getElementById('stat-review').textContent = reviewCount;
+    document.getElementById('order-count-badge').textContent =
+      `${orderCount} commande${orderCount > 1 ? 's' : ''}`;
+  }
+
+  function addOrder(data) {
+    const list = document.getElementById('order-list');
+    const noData = list.querySelector('.no-data');
+    if (noData) noData.remove();
+
+    const item = data.order.items?.[0];
+    const confPct = Math.round(data.confidence * 100);
+    const confClass = confPct >= 80 ? 'conf-high' : confPct >= 60 ? 'conf-medium' : 'conf-low';
+    const reviewClass = data.needsReview ? 'needs-review' : '';
+    const phone = data.order.buyerPhone || '';
+
+    const variantStr = item?.variant
+      ? Object.entries(item.variant).map(([k, v]) => `${k}: ${v}`).join(', ')
+      : '';
+
+    const tiktokUrl = `https://www.tiktok.com/@${data.buyer.uniqueId}`;
+
+    const card = document.createElement('div');
+    card.className = `order-card ${reviewClass}`;
+    card.dataset.orderId = data.order._id;
+    card.innerHTML = `
+      <div class="order-buyer">
+        <a href="${tiktokUrl}" target="_blank">@${data.buyer.uniqueId}</a>
+        <span class="confidence-badge ${confClass}">${confPct}%</span>
+        ${data.needsReview ? '<span style="font-size:0.7rem;color:#b45309">⚠ À valider</span>' : ''}
+      </div>
+      <div class="order-detail">
+        📦 ${item?.productName ?? '?'} × ${item?.quantity ?? 1}
+        ${variantStr ? `<span style="color:#94a3b8"> · ${variantStr}</span>` : ''}
+      </div>
+      <div class="order-detail">💰 <strong>${data.order.totalFCFA?.toLocaleString()} FCFA</strong></div>
+      ${phone ? `<div class="order-phone">📞 ${phone}</div>` : ''}
+      <div class="order-actions">
+        <button class="btn-sm btn-tiktok" onclick="window.open('${tiktokUrl}','_blank')">DM TikTok</button>
+        <button class="btn-sm btn-confirm" onclick="confirmOrder('${data.order._id}', this)">✓ Confirmer</button>
+        <button class="btn-sm btn-cancel"  onclick="cancelOrder('${data.order._id}', this)">✕ Annuler</button>
+      </div>`;
+
+    list.insertBefore(card, list.firstChild);
+  }
+
+  async function confirmOrder(id, btn) {
+    try {
+      await api('POST', `/orders/${id}/confirm`, {});
+      btn.closest('.order-card').classList.add('confirmed');
+      btn.closest('.order-card').classList.remove('needs-review');
+      btn.remove();
+      if (btn.closest('.order-card').querySelector('.btn-cancel')) {
+        // keep cancel visible
+      }
+      toast('✅ Commande confirmée');
+    } catch (e) {
+      toast(`❌ ${e.message}`);
+    }
+  }
+
+  async function cancelOrder(id, btn) {
+    try {
+      await api('POST', `/orders/${id}/cancel`, {});
+      btn.closest('.order-card').classList.add('cancelled');
+      toast('🗑 Commande annulée');
+    } catch (e) {
+      toast(`❌ ${e.message}`);
+    }
+  }
+
+  // ── Commentaires ──
+  function addComment(data) {
+    const feed = document.getElementById('comment-feed');
+    const noData = feed.querySelector('.no-data');
+    if (noData) noData.remove();
+
+    const item = document.createElement('div');
+    item.className = 'comment-item';
+    item.innerHTML = `<span class="comment-author">@${data.author.uniqueId}</span> ${escapeHtml(data.content)}`;
+    feed.insertBefore(item, feed.firstChild);
+
+    // Garder max 50 commentaires
+    while (feed.children.length > 50) feed.lastChild.remove();
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Récupérer session active au chargement ──
+  async function init() {
+    await loadProducts();
+
+    try {
+      const session = await api('GET', `/live/active/${SELLER_ID}`);
+      if (session) {
+        activeSessionId = session._id;
+        currentProductId = session.currentProductId;
+        document.getElementById('username-input').value = session.tiktokUsername;
+        document.getElementById('btn-stop').disabled = false;
+        document.getElementById('btn-export').disabled = false;
+        document.getElementById('live-status-text').textContent = 'Session active détectée';
+
+        if (currentProductId) highlightProduct(currentProductId);
+
+        // Charger les commandes existantes
+        const orders = await api('GET', `/orders?sellerId=${SELLER_ID}&liveSessionId=${activeSessionId}`);
+        orders.forEach(order => {
+          orderCount++;
+          if (order.needsManualReview && order.status === 'captured') reviewCount++;
+        });
+        updateOrderStats();
+      }
+    } catch (_) { /* pas de session active */ }
+  }
+
+  init();
+</script>
+</body>
+</html>
