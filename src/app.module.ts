@@ -6,6 +6,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { ProductsModule } from './products/products.module';
+import { LiveModule } from './live/live.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ProductsModule } from './products/products.module';
       },
     ]),
     ProductsModule,
+    LiveModule,
   ],
   providers: [
     {
