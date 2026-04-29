@@ -9,6 +9,18 @@ export default () => ({
   cors: {
     origin: process.env.CORS_ORIGIN ?? '*',
   },
+  whatsapp: {
+    /** `waha` | `cloud` */
+    provider: process.env.WHATSAPP_PROVIDER ?? 'waha',
+    cloud: {
+      graphVersion: process.env.WHATSAPP_CLOUD_GRAPH_VERSION ?? 'v21.0',
+      phoneNumberId: process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID ?? '',
+      wabaId: process.env.WHATSAPP_CLOUD_WABA_ID ?? '',
+      token: process.env.WHATSAPP_CLOUD_TOKEN ?? '',
+      appSecret: process.env.WHATSAPP_CLOUD_APP_SECRET ?? '',
+      verifyToken: process.env.WHATSAPP_CLOUD_VERIFY_TOKEN ?? '',
+    },
+  },
   waha: {
     baseUrl: process.env.WAHA_BASE_URL ?? '',
     apiKey: process.env.WAHA_API_KEY ?? '',

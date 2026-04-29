@@ -5,7 +5,9 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // `rawBody: true` permet d'accéder à `req.rawBody` (Buffer) — nécessaire
+  // pour vérifier la signature HMAC du webhook Meta WhatsApp Cloud API.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
 
   app.use(helmet());
