@@ -207,7 +207,21 @@ export class AuthService implements OnModuleInit {
     // Le `purpose` n'affecte plus le contenu (template Meta = texte figé) ;
     // un message d'accueil "Bienvenue" doit être envoyé séparément après la
     // 1re commande/login si on veut le garder.
-    await this.whatsapp.sendOtp(phone, code);
+    try {
+      await this.whatsapp.sendOtp(phone, code);
+    } catch (err) {
+      // En dev (NODE_ENV !== production), si l'envoi échoue (ex. template
+      // pas encore approuvé pendant la business verification), on logge le
+      // code en clair pour débloquer le flow de test sans bloquer l'inscription.
+      // ⚠️ Ne JAMAIS activer ce fallback en production.
+      const isProd =
+        (this.configService.get<string>('nodeEnv') ?? 'development') ===
+        'production';
+      if (isProd) throw err;
+      this.logger.warn(
+        `⚠️  Envoi OTP échoué (${err instanceof Error ? err.message : err}). DEV fallback : code pour ${phone} = ${code}`,
+      );
+    }
   }
 
   private generateCode(): string {
