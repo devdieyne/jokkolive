@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="1080" cy="80" r="180" fill="#fff" fill-opacity="0.05"/>
+  <circle cx="120" cy="560" r="220" fill="#fff" fill-opacity="0.04"/>
+
+  <!-- Logo block: rounded square badge with J monogram + live dot -->
+  <g transform="translate(96 200)">
+    <rect width="140" height="140" rx="32" fill="url(#badge)"/>
+    <rect width="140" height="140" rx="32" fill="url(#sheen)" fill-opacity="0.12"/>
+    <!-- Letter J (scaled from 64-grid: x*140/64) -->
+    <path
+      d="M87.5 35 V87.5 a17.5 17.5 0 0 1 -17.5 17.5 h-8.75"
+      stroke="#ffffff"
+      stroke-width="15"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+    <!-- Live dot -->
+    <circle cx="109.4" cy="35" r="8.75" fill="url(#dot)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="270" y="288" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="92" fill="#fff" letter-spacing="-2">JokkoLive</text>
+
+  <!-- Tagline -->
+  <text x="96" y="430" font-family="Inter, system-ui, sans-serif" font-weight="500" font-size="40" fill="#a7f3d0">Vendez sur WhatsApp.</text>
+  <text x="96" y="486" font-family="Inter, system-ui, sans-serif" font-weight="500" font-size="40" fill="#a7f3d0">Encaissez en mobile money.</text>
+
+  <!-- Bottom URL -->
+  <text x="96" y="580" font-family="Inter, system-ui, sans-serif" font-weight="600" font-size="24" fill="#fff" fill-opacity="0.6">jokkolive.com</text>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#065f46"/>
+      <stop offset="0.5" stop-color="#047857"/>
+      <stop offset="1" stop-color="#065f46"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="dot" x1="100.6" y1="26.25" x2="118.1" y2="43.75" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+</svg>
