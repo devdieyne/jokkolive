@@ -23,6 +23,18 @@ export interface WhatsappProvider {
    * - Cloud : le `wa_id` est déjà un E.164 sans `+`, toujours résoluble
    */
   resolvePhoneFromChatId(chatId: string): Promise<string | null>;
+
+  /**
+   * Envoie un OTP (code de connexion / signup) au destinataire.
+   *
+   * - Cloud : utilise un template `AUTHENTICATION` approuvé (obligatoire car
+   *   on initie la conversation hors fenêtre 24h)
+   * - WAHA  : envoie un message texte simple ; pas de notion de template
+   *
+   * @param phone E.164
+   * @param code  code numérique généré côté caller (ex. 6 chiffres)
+   */
+  sendOtp(phone: string, code: string): Promise<void>;
 }
 
 /** Token d'injection NestJS pour le provider WhatsApp actif. */

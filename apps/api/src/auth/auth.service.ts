@@ -201,12 +201,13 @@ export class AuthService implements OnModuleInit {
       purpose,
     });
 
-    const message =
-      purpose === 'register'
-        ? `🎉 Bienvenue sur JokkoLive !\n\nVotre code de validation : ${code}\n(valide ${OTP_TTL_MINUTES} min)`
-        : `Votre code JokkoLive : ${code}\n(valide ${OTP_TTL_MINUTES} min)`;
-
-    await this.whatsapp.sendText(phone, message);
+    // sendOtp() délègue au provider :
+    //  - Cloud → template AUTHENTICATION (obligatoire hors fenêtre 24h)
+    //  - WAHA  → texte simple (pas de templates)
+    // Le `purpose` n'affecte plus le contenu (template Meta = texte figé) ;
+    // un message d'accueil "Bienvenue" doit être envoyé séparément après la
+    // 1re commande/login si on veut le garder.
+    await this.whatsapp.sendOtp(phone, code);
   }
 
   private generateCode(): string {

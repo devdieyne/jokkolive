@@ -182,6 +182,41 @@ export class CloudProvider implements WhatsappProvider {
   }
 
   /**
+   * Envoie un OTP via le template AUTHENTICATION configuré.
+   *
+   * Le nom du template + la langue sont configurables via env :
+   *  - `WHATSAPP_CLOUD_OTP_TEMPLATE` (ex. `otp_login`)
+   *  - `WHATSAPP_CLOUD_OTP_LANGUAGE` (ex. `fr` ou `fr_FR`)
+   *
+   * Format requis pour un template `AUTHENTICATION` Meta :
+   *  - 1 paramètre `body` = le code (texte plain)
+   *  - 1 paramètre `button` de sous-type `url` à l'index 0 = le code à
+   *    copier (Meta génère automatiquement le bouton "Copy code")
+   *
+   * Doc : https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates
+   */
+  async sendOtp(phone: string, code: string): Promise<void> {
+    const templateName =
+      this.configService.get<string>('WHATSAPP_CLOUD_OTP_TEMPLATE') ??
+      'otp_login';
+    const language =
+      this.configService.get<string>('WHATSAPP_CLOUD_OTP_LANGUAGE') ?? 'fr';
+
+    await this.sendTemplate(phone, templateName, language, [
+      {
+        type: 'body',
+        parameters: [{ type: 'text', text: code }],
+      },
+      {
+        type: 'button',
+        sub_type: 'url',
+        index: '0',
+        parameters: [{ type: 'text', text: code }],
+      },
+    ]);
+  }
+
+  /**
    * Cloud API : `wa_id` reçu via webhook = E.164 sans `+`. Toujours résoluble,
    * pas de notion de lid.
    */

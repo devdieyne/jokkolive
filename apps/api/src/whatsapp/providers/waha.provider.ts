@@ -164,6 +164,20 @@ export class WahaProvider implements WhatsappProvider {
     return `${digits}@c.us`;
   }
 
+  /**
+   * WAHA n'a pas de templates — on envoie un texte simple. Le compte sender
+   * étant un WhatsApp grand public, il peut écrire à n'importe qui sans
+   * fenêtre 24h (c'est aussi pour ça qu'il risque le ban).
+   */
+  async sendOtp(phone: string, code: string): Promise<void> {
+    const text = [
+      `🔐 Votre code JokkoLive : *${code}*`,
+      '',
+      "Il expire dans 5 minutes. Ne le partagez avec personne.",
+    ].join('\n');
+    await this.sendText(phone, text);
+  }
+
   static chatIdToPhone(chatId: string): string {
     if (chatId.includes('@lid')) return '';
     const digits = chatId.split('@')[0]?.replace(/[^0-9]/g, '') ?? '';

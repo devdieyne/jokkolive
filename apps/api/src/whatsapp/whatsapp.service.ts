@@ -26,6 +26,15 @@ export class WhatsappService {
     return this.provider.resolvePhoneFromChatId(chatId);
   }
 
+  /**
+   * Envoie un code OTP (signup/login). Utilise un template AUTHENTICATION
+   * côté Cloud (obligatoire pour initier la conversation), un texte simple
+   * côté WAHA.
+   */
+  sendOtp(phone: string, code: string): Promise<void> {
+    return this.provider.sendOtp(phone, code);
+  }
+
   /** Accès direct au provider (utile pour appeler des méthodes spécifiques
    *  comme `sendTemplate` côté Cloud, ou des hooks WAHA). À utiliser avec
    *  parcimonie — préférer ajouter une méthode à la façade. */
