@@ -51,10 +51,20 @@ services:
       MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/jokkolive?authSource=admin
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN}
+      # ── Provider WhatsApp : `waha` (défaut) ou `cloud` ────────────────────
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-waha}
+      # ── WAHA (provider=waha) ──────────────────────────────────────────
       WAHA_BASE_URL: http://waha:3000
       WAHA_API_KEY: ${WAHA_API_KEY}
       WAHA_SESSION: ${WAHA_SESSION:-default}
       WAHA_WEBHOOK_TOKEN: ${WAHA_WEBHOOK_TOKEN}
+      # ── Meta WhatsApp Business Cloud API (provider=cloud) ─────────────
+      WHATSAPP_CLOUD_GRAPH_VERSION: ${WHATSAPP_CLOUD_GRAPH_VERSION:-v21.0}
+      WHATSAPP_CLOUD_PHONE_NUMBER_ID: ${WHATSAPP_CLOUD_PHONE_NUMBER_ID:-}
+      WHATSAPP_CLOUD_WABA_ID: ${WHATSAPP_CLOUD_WABA_ID:-}
+      WHATSAPP_CLOUD_TOKEN: ${WHATSAPP_CLOUD_TOKEN:-}
+      WHATSAPP_CLOUD_APP_SECRET: ${WHATSAPP_CLOUD_APP_SECRET:-}
+      WHATSAPP_CLOUD_VERIFY_TOKEN: ${WHATSAPP_CLOUD_VERIFY_TOKEN:-}
       ADMIN_PHONE: ${ADMIN_PHONE:-+221776583181}
       ADMIN_PSEUDO: ${ADMIN_PSEUDO:-admin}
       WHATSAPP_BUSINESS_NUMBER: ${WHATSAPP_BUSINESS_NUMBER:-+221776583181}

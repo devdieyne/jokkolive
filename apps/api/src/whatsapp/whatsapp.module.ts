@@ -26,13 +26,25 @@ const whatsappProviderFactory: Provider = {
     waha: WahaProvider,
     cloud: CloudProvider,
   ) => {
-    const choice = (config.get<string>('WHATSAPP_PROVIDER') ?? 'waha')
-      .trim()
-      .toLowerCase();
+    // On lit les deux sources : le bloc nommé `whatsapp.provider` (loader
+    // configuration.ts) et la flat env `WHATSAPP_PROVIDER`. Selon comment
+    // l'app est lancée (docker, npm run, env file vs env shell), une seule
+    // des deux peut être renseignée.
+    const raw =
+      config.get<string>('whatsapp.provider') ??
+      config.get<string>('WHATSAPP_PROVIDER') ??
+      process.env.WHATSAPP_PROVIDER ??
+      'waha';
+    const choice = raw.trim().toLowerCase();
     const logger = new Logger('WhatsappModule');
     if (choice === 'cloud') {
       logger.log('🌐 Provider WhatsApp actif : Meta Cloud API');
       return cloud;
+    }
+    if (choice !== 'waha') {
+      logger.warn(
+        `WHATSAPP_PROVIDER='${raw}' inconnu — fallback sur 'waha'. Valeurs acceptées : waha | cloud.`,
+      );
     }
     logger.log('🌐 Provider WhatsApp actif : WAHA');
     return waha;
