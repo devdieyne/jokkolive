@@ -73,7 +73,9 @@ export class PayoutService {
       );
     }
 
-    const clientReference = `JKPO-${sellerId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const clientReference = `JKPO-${sellerId.slice(-8)}-${randomUUID().slice(0, 8)}`;
+    // Format : JKPO-{8 last digits of sellerId}-{8 chars UUID}
+    // Exemple : JKPO-79bf9ea0-94b558d5 (max 24 chars) — DiamanoPay limite à 50
 
     const payout = await this.payoutModel.create({
       sellerId: new Types.ObjectId(sellerId),
