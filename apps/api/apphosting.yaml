@@ -38,9 +38,9 @@ env:
 
   # ── URLs publiques ─────────────────────────────────────────────────────────
   - variable: CORS_ORIGIN
-    value: https://jokkolive.com
+    value: https://app.jokkolive.com
   - variable: PUBLIC_BASE_URL
-    value: https://api.jokkolive.com
+    value: https://app.jokkolive.com
   - variable: FRONTEND_URL
     value: https://app.jokkolive.com
 
