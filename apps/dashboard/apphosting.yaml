@@ -12,7 +12,10 @@
 # Au runtime il n'y a pas de process Node, juste un serveur de fichiers.
 
 runConfig:
-  cpu: 0.5
+  # Cloud Run impose : CPU < 1 → concurrency = 1 (1 req/instance).
+  # Pour du static serving on veut beaucoup de concurrency par instance,
+  # donc on prend CPU=1 (et 256 MiB suffisent largement).
+  cpu: 1
   memoryMiB: 256
   maxInstances: 4
   minInstances: 0
