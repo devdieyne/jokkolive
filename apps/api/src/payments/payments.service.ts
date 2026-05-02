@@ -41,6 +41,7 @@ export interface InitiateCheckoutResult {
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private readonly publicBaseUrl: string;
+  private readonly frontendUrl: string;
 
   constructor(
     @InjectModel(PaymentLink.name)
@@ -56,6 +57,9 @@ export class PaymentsService {
     this.publicBaseUrl =
       this.configService.get<string>('PUBLIC_BASE_URL') ??
       'http://localhost:5173';
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ??
+      'http://localhost:5173';
   }
 
   private generateToken(): string {
@@ -63,7 +67,7 @@ export class PaymentsService {
   }
 
   buildUrl(token: string): string {
-    return `${this.publicBaseUrl.replace(/\/$/, '')}/pay/${token}`;
+    return `${this.frontendUrl.replace(/\/$/, '')}/pay/${token}`;
   }
 
   async createLink(input: CreateLinkInput): Promise<PaymentLinkDocument> {
