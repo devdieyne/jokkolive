@@ -19,7 +19,9 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center',
+        // Comme `Card` : edge-to-edge sur mobile (border-y seulement),
+        // card flottante avec coins arrondis sur desktop.
+        'flex flex-col items-center justify-center border-y border-dashed border-slate-200 bg-white px-6 py-16 text-center sm:rounded-xl sm:border',
         className,
       )}
     >
