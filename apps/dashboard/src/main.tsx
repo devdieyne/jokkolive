@@ -34,14 +34,23 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminRevenuePage } from './pages/AdminRevenuePage';
 import { PayPage } from './pages/PayPage';
 import { WalletPage } from './pages/WalletPage';
-import { PrivacyPage } from './pages/PrivacyPage';
-import { TermsPage } from './pages/TermsPage';
 import { ShopPage } from './pages/ShopPage';
 import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 10_000 } },
 });
+
+/**
+ * Redirige vers une URL externe dès le mount. Utilisé pour /privacy et
+ * /terms qui vivent maintenant sur le site marketing (jokkolive.com).
+ */
+function ExternalRedirect({ to }: { to: string }) {
+  if (typeof window !== 'undefined') {
+    window.location.replace(to);
+  }
+  return null;
+}
 
 function AppRoutes() {
   return (
@@ -53,8 +62,16 @@ function AppRoutes() {
       <Route path="/otp" element={<OtpPage />} />
       <Route path="/auth/magic" element={<MagicAuthPage />} />
       <Route path="/pay/:token" element={<PayPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
-      <Route path="/terms" element={<TermsPage />} />
+      {/* /privacy et /terms sont servies par le site marketing
+          (apps/website) sur https://jokkolive.com — redirection externe. */}
+      <Route
+        path="/privacy"
+        element={<ExternalRedirect to="https://jokkolive.com/privacy" />}
+      />
+      <Route
+        path="/terms"
+        element={<ExternalRedirect to="https://jokkolive.com/terms" />}
+      />
       <Route path="/shop/:pseudo" element={<ShopPage />} />
 
       {/* Vendeur connecté */}

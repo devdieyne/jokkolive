@@ -1,0 +1,16 @@
+# Firebase App Hosting — JokkoLive Website (React + Vite, statique)
+# https://firebase.google.com/docs/app-hosting/configure
+#
+# Le rootDirectory de App Hosting doit pointer sur `apps/website`.
+# Site marketing servi sur https://jokkolive.com.
+
+runConfig:
+  # Cloud Run impose CPU >= 1 si concurrency > 1 (cf. dashboard).
+  cpu: 1
+  memoryMiB: 256
+  maxInstances: 4
+  minInstances: 0
+  concurrency: 100
+
+# Pas de variables d'env / secrets : c'est du static pur, aucun process
+# Node ne tourne au runtime (juste `serve` qui sert les fichiers).

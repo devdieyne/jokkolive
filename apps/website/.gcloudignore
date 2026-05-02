@@ -1,0 +1,26 @@
+# Fichiers à NE PAS uploader vers Cloud Build / Firebase App Hosting.
+
+node_modules/
+npm-debug.log
+.npm
+
+# Build local (régénéré par le buildpack)
+dist/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
