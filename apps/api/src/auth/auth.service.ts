@@ -454,10 +454,14 @@ export class AuthService implements OnModuleInit {
 
     const exists = await this.userModel.findOne({ phone: adminPhone }).exec();
     if (exists) {
-      // S'il existe déjà mais pas en admin, on promeut
+      // S'il existe déjà mais pas en admin, on promeut. updateOne avec $set
+      // (pas .save()) pour ne PAS déclencher la validation sur tout le doc :
+      // si l'user existant a des champs requis manquants (data corrompue
+      // d'un précédent état), .save() planterait avec ValidationError.
       if (exists.role !== 'admin') {
-        exists.role = 'admin';
-        await exists.save();
+        await this.userModel
+          .updateOne({ _id: exists._id }, { $set: { role: 'admin' } })
+          .exec();
         this.logger.log(`👑 ${adminPhone} promu admin`);
       }
       return;
