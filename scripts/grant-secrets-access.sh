@@ -60,16 +60,17 @@ echo
 
 failed=()
 for secret in "${SECRETS[@]}"; do
-  printf "  → %-40s " "${secret}"
+  echo "─── ${secret} ───────────────────────────"
   if firebase apphosting:secrets:grantaccess "${secret}" \
        --project="${PROJECT_ID}" \
        --backend="${BACKEND_NAME}" \
-       --force >/dev/null 2>&1; then
-    echo "✅"
+       --non-interactive 2>&1; then
+    echo "  ✅"
   else
-    echo "❌"
+    echo "  ❌"
     failed+=("${secret}")
   fi
+  echo
 done
 
 echo
