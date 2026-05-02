@@ -32,20 +32,16 @@ async function bootstrap() {
   }
   app.enableCors({ origin: corsOrigin ?? '*' });
 
-  // Webhooks en prod : si secrets manquants → un attaquant peut forger des
-  // événements (faux paiements, faux messages WhatsApp). On log loud pour
-  // que ça soit immédiatement visible dans les dashboards.
-  if (isProd) {
-    if (!configService.get<string>('WHATSAPP_CLOUD_APP_SECRET')) {
-      logger.warn(
-        '⚠️  WHATSAPP_CLOUD_APP_SECRET vide en PROD — la signature HMAC du webhook Cloud n\'est PAS vérifiée. À configurer avant tout trafic réel.',
-      );
-    }
-    if (!configService.get<string>('WAHA_WEBHOOK_TOKEN')) {
-      logger.warn(
-        '⚠️  WAHA_WEBHOOK_TOKEN vide en PROD — le webhook WAHA accepte n\'importe quelle requête. À configurer.',
-      );
-    }
+  // Webhooks en prod : si le secret HMAC est manquant → un attaquant peut
+  // forger des événements (faux paiements, faux messages WhatsApp). On log
+  // loud pour que ça soit immédiatement visible dans les dashboards Cloud Run.
+  if (
+    isProd &&
+    !configService.get<string>('whatsapp.cloud.appSecret')
+  ) {
+    logger.warn(
+      '⚠️  WHATSAPP_CLOUD_APP_SECRET vide en PROD — la signature HMAC du webhook Cloud n\'est PAS vérifiée. À configurer avant tout trafic réel.',
+    );
   }
 
   app.useGlobalPipes(

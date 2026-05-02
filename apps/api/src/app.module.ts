@@ -22,6 +22,7 @@ import { AdminStatsModule } from './admin-stats/admin-stats.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('mongodb.uri'),
+        dbName: configService.get<string>('mongodb.dbName'),
       }),
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),

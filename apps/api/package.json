@@ -1,10 +1,13 @@
 {
   "name": "@jokkolive/api",
   "version": "1.0.0",
-  "description": "JokkoLive API — Commerce WhatsApp pour vendeurs (WAHA + paiements)",
+  "description": "JokkoLive API — Commerce WhatsApp + paiements mobile money",
   "author": "Dieyné",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0 <21"
+  },
   "scripts": {
     "build": "nest build",
     "start": "node dist/main",

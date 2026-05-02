@@ -14,7 +14,16 @@ import type {
   UserRecord,
 } from '../types';
 
-const BASE = '/api';
+/**
+ * URL de l'API consommée par le dashboard.
+ *
+ * - **Dev local** : `/api` → le proxy Vite (cf. vite.config.ts) redirige
+ *   vers `http://localhost:3000`. Pas de CORS à gérer.
+ * - **Prod (Google Cloud)** : la valeur est injectée au build via
+ *   `VITE_API_URL` (ex: `https://api.jokkolive.com`). L'API doit alors
+ *   autoriser l'origine du dashboard via `CORS_ORIGIN`.
+ */
+const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');

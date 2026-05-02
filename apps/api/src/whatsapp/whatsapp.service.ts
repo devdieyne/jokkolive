@@ -5,11 +5,8 @@ import {
 } from './providers/whatsapp-provider.interface';
 
 /**
- * Façade publique du module WhatsApp.
- *
- * Délègue tout au provider concret (WAHA ou Meta Cloud API) sélectionné par
- * `WHATSAPP_PROVIDER` dans la config. Le reste de l'app n'a pas à savoir
- * lequel est actif.
+ * Façade publique du module WhatsApp. Délègue tout au provider concret
+ * (Meta Cloud API). Le reste de l'app utilise uniquement cette façade.
  */
 @Injectable()
 export class WhatsappService {
@@ -27,28 +24,18 @@ export class WhatsappService {
   }
 
   /**
-   * Envoie un code OTP (signup/login). Utilise un template AUTHENTICATION
-   * côté Cloud (obligatoire pour initier la conversation), un texte simple
-   * côté WAHA.
+   * Envoie un OTP (login). Côté Cloud : texte simple, qui ne fonctionne
+   * que si le user a écrit au numéro business dans les 24h. Le call-site
+   * (auth.service.issueOtp) catche les erreurs sans planter et l'UI affiche
+   * un fallback "écrire LOGIN sur WhatsApp".
    */
   sendOtp(phone: string, code: string): Promise<void> {
     return this.provider.sendOtp(phone, code);
   }
 
-  /** Accès direct au provider (utile pour appeler des méthodes spécifiques
-   *  comme `sendTemplate` côté Cloud, ou des hooks WAHA). À utiliser avec
-   *  parcimonie — préférer ajouter une méthode à la façade. */
+  /** Accès direct au provider — utile pour des méthodes Cloud-spécifiques
+   *  (ex: sendTemplate). À utiliser avec parcimonie. */
   getProvider(): WhatsappProvider {
     return this.provider;
-  }
-
-  /**
-   * Helper rétro-compatible : utilisé par certains call-sites legacy.
-   * Pour Cloud API c'est juste un strip de `@`/`+`.
-   */
-  static chatIdToPhone(chatId: string): string {
-    if (chatId.includes('@lid')) return '';
-    const digits = chatId.split('@')[0]?.replace(/[^0-9]/g, '') ?? '';
-    return digits ? `+${digits}` : '';
   }
 }

@@ -2,16 +2,21 @@ export default () => ({
   port: parseInt(process.env.PORT ?? '3000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
   mongodb: {
-    uri:
-      process.env.MONGODB_URI ??
-      'mongodb://localhost:27017/jokkolive',
+    /**
+     * URI complète Mongo (ex: `mongodb+srv://user:pass@cluster.mongodb.net/`).
+     * Sur Google Cloud avec MongoDB Atlas, c'est l'URL fournie par Atlas.
+     */
+    uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017',
+    /**
+     * Nom de la database. Séparé de l'URI pour pouvoir utiliser une URI
+     * Atlas générique et choisir la DB par environnement (prod/staging).
+     */
+    dbName: process.env.MONGO_DB_NAME ?? 'jokkolive',
   },
   cors: {
     origin: process.env.CORS_ORIGIN ?? '*',
   },
   whatsapp: {
-    /** `waha` | `cloud` */
-    provider: process.env.WHATSAPP_PROVIDER ?? 'waha',
     cloud: {
       graphVersion: process.env.WHATSAPP_CLOUD_GRAPH_VERSION ?? 'v21.0',
       phoneNumberId: process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID ?? '',
@@ -20,11 +25,6 @@ export default () => ({
       appSecret: process.env.WHATSAPP_CLOUD_APP_SECRET ?? '',
       verifyToken: process.env.WHATSAPP_CLOUD_VERIFY_TOKEN ?? '',
     },
-  },
-  waha: {
-    baseUrl: process.env.WAHA_BASE_URL ?? '',
-    apiKey: process.env.WAHA_API_KEY ?? '',
-    session: process.env.WAHA_SESSION ?? 'default',
   },
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? 'http://localhost:5173',
   psp: {

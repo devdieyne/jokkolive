@@ -1,0 +1,32 @@
+# Fichiers à NE PAS uploader vers Cloud Build / Cloud Run.
+# Plus c'est court à uploader, plus le déploiement est rapide.
+
+# Node
+node_modules/
+npm-debug.log
+.npm
+
+# Build local (Cloud Run rebuild via buildpack)
+dist/
+
+# Tests / coverage
+coverage/
+test/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env (secrets — passés via gcloud run --set-env-vars)
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore

@@ -1,38 +1,30 @@
 /**
- * Contrat commun à tous les providers WhatsApp (WAHA, Meta Cloud API, …).
+ * Contrat du provider WhatsApp utilisé par l'application.
  *
- * Le reste de l'app ne connaît que cette interface — la sélection du provider
- * concret se fait via `WHATSAPP_PROVIDER` (cf. WhatsappModule).
+ * Une seule implémentation réelle aujourd'hui : `CloudProvider` (Meta
+ * WhatsApp Business Cloud API). L'interface est conservée pour permettre
+ * le mock en tests et faciliter une éventuelle bascule de provider.
  */
 export interface WhatsappProvider {
   /**
    * Envoie un message texte.
    *
-   * @param recipient soit un E.164 (`+221776583181`), soit un identifiant de
-   *                  chat brut (chatId WAHA `@c.us`/`@lid`, ou wa_id Cloud).
-   *                  Pour répondre dans le fil reçu via webhook, repasser
-   *                  l'identifiant entrant.
+   * @param recipient soit un E.164 (`+221776583181`), soit un wa_id Cloud
+   *                  (E.164 sans `+`). Pour répondre dans un fil entrant,
+   *                  repasser l'identifiant reçu via webhook.
    */
   sendText(recipient: string, text: string): Promise<void>;
 
   /**
-   * Convertit un identifiant de chat entrant (webhook) en numéro E.164 stable.
-   * Retourne `null` si non résoluble (lid privé, etc.).
-   *
-   * - WAHA  : `221xxx@c.us` → `+221xxx` ; `xxx@lid` → contacts API
-   * - Cloud : le `wa_id` est déjà un E.164 sans `+`, toujours résoluble
+   * Convertit un identifiant de chat entrant (webhook) en E.164.
+   * Cloud API : le `wa_id` est déjà un E.164 sans `+` → toujours résoluble.
    */
   resolvePhoneFromChatId(chatId: string): Promise<string | null>;
 
   /**
-   * Envoie un OTP (code de connexion / signup) au destinataire.
-   *
-   * - Cloud : utilise un template `AUTHENTICATION` approuvé (obligatoire car
-   *   on initie la conversation hors fenêtre 24h)
-   * - WAHA  : envoie un message texte simple ; pas de notion de template
-   *
-   * @param phone E.164
-   * @param code  code numérique généré côté caller (ex. 6 chiffres)
+   * Envoie un OTP (code de connexion). Implémentation actuelle Cloud :
+   * texte simple — fonctionne uniquement si le user a écrit au business
+   * dans les 24h (sinon Meta refuse). Le call-site gère le fallback UI.
    */
   sendOtp(phone: string, code: string): Promise<void>;
 }
