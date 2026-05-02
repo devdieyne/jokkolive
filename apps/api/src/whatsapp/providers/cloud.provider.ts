@@ -182,38 +182,29 @@ export class CloudProvider implements WhatsappProvider {
   }
 
   /**
-   * Envoie un OTP via le template AUTHENTICATION configuré.
+   * Envoi OTP en TEXTE SIMPLE (pas de template).
    *
-   * Le nom du template + la langue sont configurables via env :
-   *  - `WHATSAPP_CLOUD_OTP_TEMPLATE` (ex. `otp_login`)
-   *  - `WHATSAPP_CLOUD_OTP_LANGUAGE` (ex. `fr` ou `fr_FR`)
+   * ⚠️ Limitation Meta : un message texte business-initiated ne fonctionne
+   * QUE si le user a écrit au numéro business dans les dernières 24h
+   * (fenêtre "service"). Pour un user qui demande un OTP depuis le site
+   * web sans avoir écrit récemment → Meta refusera l'envoi (erreur 131056
+   * "outside customer service window").
    *
-   * Format requis pour un template `AUTHENTICATION` Meta :
-   *  - 1 paramètre `body` = le code (texte plain)
-   *  - 1 paramètre `button` de sous-type `url` à l'index 0 = le code à
-   *    copier (Meta génère automatiquement le bouton "Copy code")
+   * Le call-site (AuthService.issueOtp) catche cette erreur sans throw et
+   * informe le user via l'UI : "Si vous ne recevez pas le code, écrivez
+   * LOGIN sur le numéro WhatsApp" → ce message ouvre la fenêtre 24h ET
+   * déclenche un magic link de fallback.
    *
-   * Doc : https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates
+   * À réactiver via template AUTHENTICATION (`sendTemplate`) une fois la
+   * Business Verification Meta validée + template approuvé.
    */
   async sendOtp(phone: string, code: string): Promise<void> {
-    const templateName =
-      this.configService.get<string>('WHATSAPP_CLOUD_OTP_TEMPLATE') ??
-      'otp_login';
-    const language =
-      this.configService.get<string>('WHATSAPP_CLOUD_OTP_LANGUAGE') ?? 'fr';
-
-    await this.sendTemplate(phone, templateName, language, [
-      {
-        type: 'body',
-        parameters: [{ type: 'text', text: code }],
-      },
-      {
-        type: 'button',
-        sub_type: 'url',
-        index: '0',
-        parameters: [{ type: 'text', text: code }],
-      },
-    ]);
+    const text = [
+      `🔐 Votre code JokkoLive : *${code}*`,
+      '',
+      'Il expire dans 5 minutes. Ne le partagez avec personne.',
+    ].join('\n');
+    await this.sendText(phone, text);
   }
 
   /**

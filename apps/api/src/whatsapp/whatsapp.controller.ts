@@ -38,13 +38,17 @@ interface WahaWebhookPayload {
  *                                              compte expose un `@lid` non
  *                                              livrable)
  *
- * Le `@` est optionnel pour tolérer les acheteurs qui retapent le message à
- * la main (ils oublient souvent l'arobase). La présence d'un séparateur `:`
- * ou ` ` entre pseudo et code reste obligatoire pour ne pas confondre avec
- * un mot collé du genre "adminR1".
+ * Volontairement permissif pour absorber les typos en live TikTok :
+ *  - `@` optionnel
+ *  - séparateurs acceptés : `:`, ` `, `.`, `-`, `,`
+ *  - code avec ou sans préfixe lettre (`R1`, `J5`, `12`, `45`)
+ *  - téléphone explicite optionnel en fin
+ *
+ * Exemples qui matchent :
+ *   `@abou:R1`   `abou:R1`   `Abou R1`   `abou.R1`   `abou-r1`   `abou 45`
  */
 const COMMAND_RE =
-  /^\s*@?([a-z0-9_]{3,20})\s*[: ]\s*([A-Z]{1,4}\d{1,5})(?:\s+(\+?\d{8,15}))?\s*$/i;
+  /^\s*@?([a-z0-9_]{3,20})\s*[:.\- ,]+\s*([A-Z]{0,4}\d{1,5})(?:\s+(\+?\d{8,15}))?\s*$/i;
 
 @Controller('webhooks/whatsapp')
 export class WhatsappController {

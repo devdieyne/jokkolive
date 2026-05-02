@@ -4,6 +4,7 @@ import { WhatsappService } from './whatsapp.service';
 import { WhatsappController } from './whatsapp.controller';
 import { CloudWebhookController } from './cloud-webhook.controller';
 import { OrdersModule } from '../orders/orders.module';
+import { AuthModule } from '../auth/auth.module';
 import { WahaProvider } from './providers/waha.provider';
 import { CloudProvider } from './providers/cloud.provider';
 import { WHATSAPP_PROVIDER } from './providers/whatsapp-provider.interface';
@@ -53,7 +54,7 @@ const whatsappProviderFactory: Provider = {
 };
 
 @Module({
-  imports: [forwardRef(() => OrdersModule)],
+  imports: [forwardRef(() => OrdersModule), forwardRef(() => AuthModule)],
   providers: [WahaProvider, CloudProvider, whatsappProviderFactory, WhatsappService],
   controllers: [WhatsappController, CloudWebhookController],
   exports: [WhatsappService],

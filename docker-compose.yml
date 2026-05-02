@@ -71,6 +71,7 @@ services:
       ADMIN_PSEUDO: ${ADMIN_PSEUDO:-admin}
       WHATSAPP_BUSINESS_NUMBER: ${WHATSAPP_BUSINESS_NUMBER:-+221776583181}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://jokkolive.com}
+      FRONTEND_URL: ${FRONTEND_URL:-https://jokkolive.com}
       # ── PSP DiamanoPay ──────────────────────────────────────────────────
       DIAMANO_PAY_TOKEN: ${DIAMANO_PAY_TOKEN:-}
       DIAMANO_PAY_BASE_URL: ${DIAMANO_PAY_BASE_URL:-https://api.diamanopay.com}

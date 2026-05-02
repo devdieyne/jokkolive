@@ -17,6 +17,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
 import { WhatsappService } from './whatsapp.service';
 import { OrdersService } from '../orders/orders.service';
+import { AuthService } from '../auth/auth.service';
 
 /**
  * Payload Meta Cloud API (simplifié — on ne consomme que ce qu'on utilise).
@@ -48,9 +49,36 @@ interface CloudWebhookPayload {
   }>;
 }
 
-/** Même regex que côté WAHA — format de commande commun. */
+/**
+ * Format de commande — volontairement permissif pour absorber les typos
+ * fréquents en live TikTok :
+ *  - `@` optionnel devant le pseudo
+ *  - séparateurs acceptés : `:`, ` `, `.`, `-`, `,`
+ *  - code accepté avec ou sans préfixe lettre : `R1`, `J5`, `12`, `45`
+ *  - téléphone explicite optionnel en fin (cas où le buyer commande pour un proche)
+ *
+ * Exemples qui matchent :
+ *   `@abou:R1`   `abou:R1`   `Abou R1`   `abou.R1`   `abou-r1`
+ *   `abou 45`    `abou:12`   `abou,R1`   `abou: r1 +221776583181`
+ */
 const COMMAND_RE =
-  /^\s*@?([a-z0-9_]{3,20})\s*[: ]\s*([A-Z]{1,4}\d{1,5})(?:\s+(\+?\d{8,15}))?\s*$/i;
+  /^\s*@?([a-z0-9_]{3,20})\s*[:.\- ,]+\s*([A-Z]{0,4}\d{1,5})(?:\s+(\+?\d{8,15}))?\s*$/i;
+
+/**
+ * Mots-clés qui déclenchent l'envoi d'un magic link de connexion.
+ *
+ * Inscription publique désactivée → on ne reconnaît plus les keywords
+ * "signup", "inscription", "register" (un user inconnu serait juste rejeté
+ * avec "contactez l'admin", autant le router via le menu d'aide).
+ *
+ * Les salutations génériques (hi, hello…) sont gérées par `GREETING_RE`.
+ */
+const AUTH_KEYWORDS_RE =
+  /^\s*(login|connexion|connection|start)\s*$/i;
+
+/** Salutations / demandes d'aide → on répond avec un menu, pas un magic link. */
+const GREETING_RE =
+  /^\s*(menu|aide|help|bonjour|salut|hi|hello|info|infos)\s*$/i;
 
 /**
  * Webhook Meta WhatsApp Business Cloud API.
@@ -79,6 +107,8 @@ export class CloudWebhookController {
     private readonly ordersService: OrdersService,
     @Inject(forwardRef(() => WhatsappService))
     private readonly whatsappService: WhatsappService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
   ) {
     this.verifyToken =
       this.configService.get<string>('WHATSAPP_CLOUD_VERIFY_TOKEN') ?? '';
@@ -161,6 +191,72 @@ export class CloudWebhookController {
       }
 
       const text = msg.text!.trim();
+
+      // Garde : `from` doit contenir au moins quelques chiffres pour former
+      // un E.164 valide. Très improbable (Meta envoie toujours un wa_id) mais
+      // évite un appel à requestMagicLink avec phone="+".
+      const fromDigits = (msg.from ?? '').replace(/[^0-9]/g, '');
+      if (fromDigits.length < 8) {
+        this.logger.warn(`Cloud msg avec from invalide: "${msg.from}"`);
+        continue;
+      }
+
+      // 1) Auth keyword → magic link. Le user a initié → fenêtre 24h ouverte
+      //    → on peut répondre librement (pas besoin de template).
+      //    L'inscription publique est désactivée : un user inconnu reçoit
+      //    un message "contactez l'admin" au lieu d'un lien.
+      if (AUTH_KEYWORDS_RE.test(text)) {
+        const phone = '+' + fromDigits;
+        try {
+          const { url } = await this.authService.requestMagicLink(
+            phone,
+            msg.name,
+          );
+          const greeting = msg.name ? `Bonjour ${msg.name} 👋` : 'Bonjour 👋';
+          await this.whatsappService.sendText(
+            msg.from!,
+            `${greeting}\n\nVoici votre lien sécurisé pour accéder à JëkkiJot :\n${url}\n\n⏱ Le lien expire dans 10 minutes et est à usage unique.`,
+          );
+          this.logger.log(`🔗 Magic link envoyé à ${phone}`);
+        } catch (err) {
+          const msgText = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Magic link pour ${fromDigits}: ${msgText}`);
+
+          // 3 cas distincts à traduire en message user-friendly :
+          //  - cooldown anti-spam (BadRequestException)
+          //  - user inexistant (NotFoundException) → inscription désactivée
+          //  - autre erreur → message générique
+          let reply: string;
+          if (msgText.includes('patientez')) {
+            reply = msgText;
+          } else if (msgText.toLowerCase().includes('aucun compte')) {
+            reply =
+              "Vous n'avez pas encore de compte JokkoLive 🙅\n\n" +
+              "Contactez l'administrateur pour vous inscrire — l'inscription publique est fermée.";
+          } else {
+            reply =
+              'Désolé, une erreur est survenue. Réessayez dans quelques instants.';
+          }
+          await this.whatsappService
+            .sendText(msg.from!, reply)
+            .catch(() => undefined);
+        }
+        continue;
+      }
+
+      // 1bis) Salutation / demande d'aide → on n'envoie PAS de magic link
+      //       (éviter les liens surprise) mais on guide le user.
+      if (GREETING_RE.test(text)) {
+        await this.whatsappService
+          .sendText(
+            msg.from!,
+            'Bonjour 👋\n\n• Pour vous connecter (compte vendeur existant) : envoyez *LOGIN*\n• Pour acheter un produit : envoyez *@pseudoVendeur:CODE*\n\n💡 L\'inscription se fait uniquement via l\'administrateur.',
+          )
+          .catch(() => undefined);
+        continue;
+      }
+
+      // 2) Commande de vente `@pseudo:CODE`
       const match = COMMAND_RE.exec(text);
       if (!match) {
         this.logger.debug(`Cloud msg ignoré (format) de ${msg.from}: "${text}"`);
@@ -174,7 +270,7 @@ export class CloudWebhookController {
       // commande pour un proche).
       const buyerPhone = explicitPhone
         ? '+' + explicitPhone.replace(/[^0-9]/g, '')
-        : '+' + msg.from!.replace(/[^0-9]/g, '');
+        : '+' + fromDigits;
       const buyerChatId = msg.from!; // wa_id digits-only — on le garde pour reply
 
       this.logger.log(

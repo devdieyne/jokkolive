@@ -8,26 +8,26 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { UpdateCurrencyDto } from './dto/update-currency.dto';
+import { VerifyMagicLinkDto } from './dto/verify-magic-link.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 interface AuthRequest {
   user: { id: string };
 }
 
+/**
+ * L'inscription publique (POST /auth/register, POST /auth/magic/complete-signup)
+ * est désactivée : seul un admin peut créer un compte via POST /users.
+ * Les utilisateurs se connectent ensuite via OTP ou magic link.
+ */
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  @HttpCode(200)
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.phone, dto.pseudo, dto.displayName);
-  }
 
   @Post('request-otp')
   @HttpCode(200)
@@ -39,6 +39,22 @@ export class AuthController {
   @HttpCode(200)
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.phone, dto.code);
+  }
+
+  /**
+   * Magic link : consomme le token reçu par WhatsApp et renvoie une session
+   * JWT pour un compte existant. Si le token correspond à un compte inconnu,
+   * désactivé ou expiré, l'endpoint répond 401/404.
+   *
+   * Rate-limit : 10 req/min/IP. Defense in depth — un token random 256 bits
+   * est mathématiquement impossible à brute-forcer, mais on plafonne quand
+   * même pour limiter le bruit logs et éviter qu'un IP scanne en boucle.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('magic/verify')
+  @HttpCode(200)
+  verifyMagic(@Body() dto: VerifyMagicLinkDto) {
+    return this.authService.verifyMagicLink(dto.token);
   }
 
   @Get('me')

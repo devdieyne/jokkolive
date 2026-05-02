@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { requestOtp } from '../api/client';
 import { PhoneInput } from '../components/PhoneInput';
@@ -21,8 +21,13 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      await requestOtp(phone);
-      navigate('/otp', { state: { phone, mode: 'login' } });
+      const res = await requestOtp(phone);
+      // Le fallback wa.me est passé à OtpPage pour qu'elle affiche
+      // "Pas reçu ? Écrivez LOGIN ici" — utile car en prod l'envoi du code
+      // peut échouer silencieusement si la fenêtre 24h n'est pas ouverte.
+      navigate('/otp', {
+        state: { phone, mode: 'login', fallback: res.fallback },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -86,14 +91,8 @@ export function LoginPage() {
         </form>
       </div>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
-        Pas encore de compte ?{' '}
-        <Link
-          to="/register"
-          className="font-medium text-emerald-700 transition-colors hover:text-emerald-800 hover:underline"
-        >
-          Créer un compte
-        </Link>
+      <p className="mt-6 text-center text-xs text-slate-400">
+        Pas encore de compte ? Contactez l'administrateur pour vous inscrire.
       </p>
     </div>
   );

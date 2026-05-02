@@ -8,9 +8,9 @@ import {
   FormEvent,
 } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Smartphone } from 'lucide-react';
+import { MessageCircle, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { requestOtp } from '../api/client';
+import { requestOtp, type OtpFallback } from '../api/client';
 import { Button } from '../components/ui/Button';
 import { Logo } from '../components/ui/Logo';
 import { cn } from '../components/ui/cn';
@@ -18,6 +18,8 @@ import { cn } from '../components/ui/cn';
 interface LocationState {
   phone?: string;
   mode?: 'login' | 'register';
+  /** Lien wa.me "écrire LOGIN" affiché si l'OTP n'arrive pas. */
+  fallback?: OtpFallback;
 }
 
 const RESEND_COOLDOWN_S = 60;
@@ -29,6 +31,9 @@ export function OtpPage() {
   const state = (location.state ?? {}) as LocationState;
   const phone = state.phone ?? '';
   const mode = state.mode ?? 'login';
+  const [fallback, setFallback] = useState<OtpFallback | undefined>(
+    state.fallback,
+  );
 
   const { loginWithOtp } = useAuth();
   const [digits, setDigits] = useState<string[]>(() =>
@@ -144,7 +149,8 @@ export function OtpPage() {
     setError('');
     setInfo('');
     try {
-      await requestOtp(phone);
+      const res = await requestOtp(phone);
+      if (res.fallback) setFallback(res.fallback);
       setInfo('Un nouveau code vient d\u2019être envoyé sur WhatsApp.');
       setCooldown(RESEND_COOLDOWN_S);
     } catch (err) {
@@ -235,6 +241,41 @@ export function OtpPage() {
             {loading ? 'Vérification…' : 'Valider le code'}
           </Button>
         </form>
+
+        {fallback && (
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
+                <MessageCircle className="h-4 w-4 text-emerald-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-emerald-900">
+                  Vous n'avez pas reçu le code ?
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-700">
+                  Écrivez{' '}
+                  <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800">
+                    {fallback.prefilledMessage}
+                  </code>{' '}
+                  sur WhatsApp au{' '}
+                  <span className="font-medium tabular-nums">
+                    {fallback.whatsappNumber}
+                  </span>{' '}
+                  : vous recevrez un lien de connexion sécurisé.
+                </p>
+                <a
+                  href={fallback.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Ouvrir WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col items-center gap-2 border-t border-slate-100 pt-5">
           <button

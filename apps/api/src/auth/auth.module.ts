@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User, UserSchema } from '../schemas/user.schema';
 import { OtpCode, OtpCodeSchema } from '../schemas/otp-code.schema';
+import { MagicLink, MagicLinkSchema } from '../schemas/magic-link.schema';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 
 @Module({
@@ -24,8 +25,9 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: OtpCode.name, schema: OtpCodeSchema },
+      { name: MagicLink.name, schema: MagicLinkSchema },
     ]),
-    WhatsappModule,
+    forwardRef(() => WhatsappModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
