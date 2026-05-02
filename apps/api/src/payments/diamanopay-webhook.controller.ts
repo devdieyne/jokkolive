@@ -24,7 +24,7 @@ import {
  *
  * Idempotence : si `link.status === 'paid'` déjà, on ack 200 sans rien faire.
  */
-@Controller('webhooks/diamanopay')
+@Controller('api/webhooks/diamanopay')
 export class DiamanoPayWebhookController {
   private readonly logger = new Logger(DiamanoPayWebhookController.name);
 
