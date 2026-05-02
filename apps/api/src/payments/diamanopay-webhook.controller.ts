@@ -9,6 +9,7 @@ import {
 import { DiamanoPayWebhookDto } from './dto/diamanopay-webhook.dto';
 import { PaymentsService } from './payments.service';
 import { BalanceService } from './balance.service';
+import { PayoutService } from './payout.service';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -30,6 +31,7 @@ export class DiamanoPayWebhookController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly balanceService: BalanceService,
+    private readonly payoutService: PayoutService,
     @Inject(PAYMENT_PROVIDER) private readonly psp: PaymentProvider,
   ) {}
 
@@ -120,6 +122,24 @@ export class DiamanoPayWebhookController {
     }
 
     await this.balanceService.creditFromPayment(link, tx);
+
+    // Auto-payout fire-and-forget : on ne bloque pas la réponse webhook
+    // (DiamanoPay attend un 200 rapide). triggerAutoPayout ne throw jamais
+    // — il gère lui-même les notifications en cas d'échec.
+    // Après creditFromPayment, link a été mis à jour avec sellerNet et
+    // paymentMethodUsed (cf. balance.service.ts).
+    const sellerNet = link.sellerNet ?? 0;
+    const provider = link.paymentMethodUsed;
+    if (sellerNet > 0 && provider) {
+      void this.payoutService
+        .triggerAutoPayout(link.sellerId.toString(), sellerNet, provider)
+        .catch((err) =>
+          this.logger.error(
+            `triggerAutoPayout error: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+    }
+
     return { received: true };
   }
 }

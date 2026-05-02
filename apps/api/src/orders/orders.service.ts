@@ -80,7 +80,17 @@ export class OrdersService {
       return;
     }
 
-    if (product.stock !== undefined && product.stock <= 0) {
+    const quantity = 1;
+    const totalAmount = product.price * quantity;
+
+    // Décrément atomique du stock — race-safe via findOneAndUpdate.
+    // Si quelqu'un d'autre vient de prendre le dernier exemplaire entre la
+    // lecture du `product` et ici, on échoue ici proprement.
+    const stockOk = await this.productsService.tryDecrementStock(
+      product._id as Types.ObjectId,
+      quantity,
+    );
+    if (!stockOk) {
       await this.whatsappService.sendText(
         msg.buyerChatId,
         `Le produit ${product.code} (${product.name}) est en rupture de stock.`,
@@ -88,49 +98,64 @@ export class OrdersService {
       return;
     }
 
-    const quantity = 1;
-    const totalAmount = product.price * quantity;
-
-    // Retry sur collision de référence (improbable mais cheap à protéger).
+    // À partir d'ici le stock est réservé : on doit le restaurer en cas
+    // d'échec de création de commande ou de lien de paiement, sinon on aura
+    // un stock fantôme bloqué.
     let order;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        order = await this.orderModel.create({
-          reference: generateOrderReference(),
-          sellerId: seller._id,
-          productId: product._id,
-          productName: product.name,
-          productCode: product.code,
-          quantity,
-          unitPrice: product.price,
-          totalAmount,
-          currency: product.currency,
-          buyerPhone: msg.buyerPhone,
-          buyerName: msg.buyerName,
-          rawMessage: msg.rawMessage,
-          status: 'pending',
-        });
-        break;
-      } catch (err: unknown) {
-        const code = (err as { code?: number })?.code;
-        if (code === 11000 && attempt < 4) {
-          this.logger.warn('Collision référence commande — retry');
-          continue;
+    let link;
+    try {
+      // Retry sur collision de référence (improbable mais cheap à protéger).
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          order = await this.orderModel.create({
+            reference: generateOrderReference(),
+            sellerId: seller._id,
+            productId: product._id,
+            productName: product.name,
+            productCode: product.code,
+            quantity,
+            unitPrice: product.price,
+            totalAmount,
+            currency: product.currency,
+            buyerPhone: msg.buyerPhone,
+            buyerName: msg.buyerName,
+            rawMessage: msg.rawMessage,
+            status: 'pending',
+          });
+          break;
+        } catch (err: unknown) {
+          const code = (err as { code?: number })?.code;
+          if (code === 11000 && attempt < 4) {
+            this.logger.warn('Collision référence commande — retry');
+            continue;
+          }
+          throw err;
         }
-        throw err;
       }
+      if (!order) {
+        throw new Error('Impossible de générer une référence unique');
+      }
+
+      link = await this.paymentsService.createLink({
+        orderId: order._id as Types.ObjectId,
+        sellerId: seller._id as Types.ObjectId,
+        amount: totalAmount,
+        currency: product.currency,
+      });
+
+      order.paymentLinkId = link._id as Types.ObjectId;
+      await order.save();
+    } catch (err) {
+      // Rollback du stock pour ne pas bloquer le produit.
+      await this.productsService
+        .restoreStock(product._id as Types.ObjectId, quantity)
+        .catch((restoreErr) =>
+          this.logger.error(
+            `Restore stock échoué après échec création commande: ${restoreErr instanceof Error ? restoreErr.message : String(restoreErr)}`,
+          ),
+        );
+      throw err;
     }
-    if (!order) throw new Error('Impossible de générer une référence unique');
-
-    const link = await this.paymentsService.createLink({
-      orderId: order._id as Types.ObjectId,
-      sellerId: seller._id as Types.ObjectId,
-      amount: totalAmount,
-      currency: product.currency,
-    });
-
-    order.paymentLinkId = link._id as Types.ObjectId;
-    await order.save();
 
     const url = this.paymentsService.buildUrl(link.token);
 
@@ -188,9 +213,27 @@ export class OrdersService {
     dto: UpdateOrderDto,
   ): Promise<OrderDocument> {
     const order = await this.findOneOwned(orderId, sellerId);
-    if (dto.status !== undefined) {
+
+    if (dto.status !== undefined && dto.status !== order.status) {
+      const wasReservingStock = order.status === 'pending';
+      const goingToReleaseStock =
+        dto.status === 'cancelled' || dto.status === 'expired';
+
       order.status = dto.status;
       if (dto.status === 'paid' && !order.paidAt) order.paidAt = new Date();
+
+      // Restauration du stock SEULEMENT si on passe de pending → annulée
+      // ou expirée. On ne restaure pas après "paid" (la vente est faite,
+      // un éventuel remboursement est un flow distinct).
+      if (wasReservingStock && goingToReleaseStock) {
+        await this.productsService
+          .restoreStock(order.productId, order.quantity)
+          .catch((err) =>
+            this.logger.warn(
+              `restore stock échoué pour commande ${order.reference}: ${err instanceof Error ? err.message : String(err)}`,
+            ),
+          );
+      }
     }
     if (dto.buyerName !== undefined) order.buyerName = dto.buyerName;
     return order.save();

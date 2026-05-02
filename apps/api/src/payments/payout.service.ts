@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  forwardRef,
   Inject,
   Injectable,
   Logger,
@@ -16,6 +17,7 @@ import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
 } from './providers/payment-provider.interface';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class PayoutService {
@@ -29,6 +31,8 @@ export class PayoutService {
     private readonly balanceService: BalanceService,
     @Inject(PAYMENT_PROVIDER)
     private readonly psp: PaymentProvider,
+    @Inject(forwardRef(() => WhatsappService))
+    private readonly whatsapp: WhatsappService,
   ) {}
 
   async listForSeller(
@@ -130,6 +134,131 @@ export class PayoutService {
         `payout-failed sellerId=${sellerId} provider=${dto.provider} amount=${dto.amount} reason=${reason}`,
       );
       throw new BadRequestException(`Retrait refusé : ${reason}`);
+    }
+  }
+
+  /**
+   * Retrait automatique déclenché juste après qu'un paiement a crédité le
+   * solde du vendeur. Ne fait rien si :
+   *  - `autoPayoutEnabled` est false
+   *  - le compte mobile money correspondant au provider n'est pas configuré
+   *  - le montant est ≤ 0
+   *
+   * En cas d'échec PSP, `requestPayout` reverse déjà le solde (l'argent
+   * reste disponible) — on ajoute ici une notif WhatsApp au vendeur ET aux
+   * admins pour qu'ils soient au courant.
+   *
+   * Cette méthode ne throw JAMAIS : elle est appelée en fire-and-forget
+   * depuis le webhook PSP, qui ne doit pas voir ses 200 OK retardés ou
+   * cassés par un souci de retrait.
+   */
+  async triggerAutoPayout(
+    sellerId: string,
+    amount: number,
+    provider: ChargeProvider,
+  ): Promise<void> {
+    if (!Number.isInteger(amount) || amount <= 0) return;
+
+    const user = await this.userModel.findById(sellerId).exec();
+    if (!user) {
+      this.logger.warn(`auto-payout: user ${sellerId} introuvable`);
+      return;
+    }
+    if (!user.autoPayoutEnabled) return;
+
+    const account =
+      provider === 'WAVE'
+        ? user.payoutAccounts?.wave
+        : user.payoutAccounts?.orangeMoney;
+    if (!account?.mobile) {
+      // Auto-payout activé mais compte non configuré → on log et on laisse
+      // l'argent dans le solde. On ne notifie pas (c'est de la config
+      // utilisateur, le user le verra dans Settings).
+      this.logger.warn(
+        `auto-payout skipped: sellerId=${sellerId} provider=${provider} compte non configuré`,
+      );
+      return;
+    }
+
+    try {
+      const payout = await this.requestPayout(sellerId, { amount, provider });
+      this.logger.log(
+        `auto-payout-success sellerId=${sellerId} provider=${provider} amount=${amount} payoutId=${(payout._id as Types.ObjectId).toString()}`,
+      );
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `auto-payout-failed sellerId=${sellerId} provider=${provider} amount=${amount} reason=${reason}`,
+      );
+      // Notifications fire-and-forget — ne jamais throw depuis ici.
+      void this.notifyAutoPayoutFailure(user, amount, provider, reason).catch(
+        (notifErr) =>
+          this.logger.error(
+            `notif auto-payout failure échouée: ${notifErr instanceof Error ? notifErr.message : String(notifErr)}`,
+          ),
+      );
+    }
+  }
+
+  /**
+   * Envoie 2 notifications WhatsApp en cas d'échec d'un retrait automatique :
+   *  - au vendeur : "argent toujours disponible, retire manuellement"
+   *  - aux admins : alerte avec contexte pour intervenir
+   *
+   * Limitation Meta : si le destinataire n'a pas écrit au numéro business
+   * dans les 24h, l'envoi sera refusé par Cloud API. On catch silencieusement
+   * — la perte de la notif n'est pas critique (le solde reste OK et le
+   * retrait manuel reste accessible depuis le dashboard).
+   */
+  private async notifyAutoPayoutFailure(
+    seller: UserDocument,
+    amount: number,
+    provider: ChargeProvider,
+    reason: string,
+  ): Promise<void> {
+    const providerLabel = provider === 'WAVE' ? 'Wave' : 'Orange Money';
+
+    // → Vendeur
+    try {
+      await this.whatsapp.sendText(
+        seller.phone,
+        [
+          `⚠️ Retrait automatique échoué`,
+          ``,
+          `Nous n'avons pas pu envoyer ${amount} XOF sur votre compte ${providerLabel}.`,
+          `Votre argent est toujours disponible — vous pouvez le retirer manuellement depuis votre tableau de bord JokkoLive.`,
+          ``,
+          `Si le problème persiste, contactez le support.`,
+        ].join('\n'),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `notif vendeur auto-payout failure échouée pour ${seller.phone}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // → Admins (tous ceux avec role=admin)
+    const admins = await this.userModel.find({ role: 'admin' }).exec();
+    for (const admin of admins) {
+      try {
+        await this.whatsapp.sendText(
+          admin.phone,
+          [
+            `🚨 Auto-payout échoué`,
+            ``,
+            `Vendeur : ${seller.displayName} (@${seller.pseudo})`,
+            `Téléphone : ${seller.phone}`,
+            `Montant : ${amount} XOF (${providerLabel})`,
+            `Raison : ${reason}`,
+            ``,
+            `Le solde du vendeur a été restauré, il peut retirer manuellement.`,
+          ].join('\n'),
+        );
+      } catch (err) {
+        this.logger.warn(
+          `notif admin ${admin.phone} échouée: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
   }
 }

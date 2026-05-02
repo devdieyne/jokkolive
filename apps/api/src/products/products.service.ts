@@ -166,4 +166,47 @@ export class ProductsService {
     const product = await this.findOneOwned(productId, sellerId);
     await product.deleteOne();
   }
+
+  /**
+   * Tente de décrémenter atomiquement le stock du produit. Race-safe :
+   * `findOneAndUpdate` est atomique dans Mongo. Si le stock est déjà à 0
+   * (ou si le produit n'existe pas), retourne false et ne touche rien.
+   *
+   * Utilisé à la création d'une commande pour éviter qu'en live TikTok
+   * 10 acheteurs commandent en même temps un stock de 5.
+   */
+  async tryDecrementStock(
+    productId: Types.ObjectId | string,
+    quantity = 1,
+  ): Promise<boolean> {
+    const id =
+      typeof productId === 'string'
+        ? new Types.ObjectId(productId)
+        : productId;
+    const updated = await this.productModel
+      .findOneAndUpdate(
+        { _id: id, stock: { $gte: quantity } },
+        { $inc: { stock: -quantity } },
+        { new: true },
+      )
+      .exec();
+    return !!updated;
+  }
+
+  /**
+   * Restaure du stock (ex: commande annulée/expirée avant paiement).
+   * Toujours sûr — pas de race possible sur un $inc positif.
+   */
+  async restoreStock(
+    productId: Types.ObjectId | string,
+    quantity = 1,
+  ): Promise<void> {
+    const id =
+      typeof productId === 'string'
+        ? new Types.ObjectId(productId)
+        : productId;
+    await this.productModel
+      .updateOne({ _id: id }, { $inc: { stock: quantity } })
+      .exec();
+  }
 }

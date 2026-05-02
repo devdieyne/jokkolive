@@ -8,6 +8,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePlatformFeeDto } from './dto/update-platform-fee.dto';
 
 @Injectable()
 export class UsersService {
@@ -59,5 +60,37 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const res = await this.userModel.findByIdAndDelete(id).exec();
     if (!res) throw new NotFoundException('Utilisateur introuvable');
+  }
+
+  /**
+   * Override admin des frais plateforme pour un vendeur. Les deux champs
+   * (flat, percent) sont systématiquement écrits ensemble pour éviter
+   * un état mixte override-partiel/fallback-env confusing.
+   */
+  async setPlatformFee(
+    id: string,
+    dto: UpdatePlatformFeeDto,
+  ): Promise<UserDocument> {
+    const updated = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        { $set: { platformFee: { flat: dto.flat, percent: dto.percent } } },
+        { new: true },
+      )
+      .exec();
+    if (!updated) throw new NotFoundException('Utilisateur introuvable');
+    return updated;
+  }
+
+  /**
+   * Reset l'override : ce vendeur retombe sur les valeurs env globales
+   * (`PLATFORM_FEE_FLAT` / `PLATFORM_FEE_PERCENT`).
+   */
+  async clearPlatformFee(id: string): Promise<UserDocument> {
+    const updated = await this.userModel
+      .findByIdAndUpdate(id, { $unset: { platformFee: 1 } }, { new: true })
+      .exec();
+    if (!updated) throw new NotFoundException('Utilisateur introuvable');
+    return updated;
   }
 }

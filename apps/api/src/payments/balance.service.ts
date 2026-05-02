@@ -74,8 +74,18 @@ export class BalanceService {
         : Number(rawPercent);
   }
 
-  computeFee(amount: number): { fee: number; net: number } {
-    return computeFee(amount, this.feeFlat, this.feePercent);
+  /**
+   * Calcule les frais plateforme. Si le vendeur a un override admin
+   * (`User.platformFee`), on l'utilise — sinon on retombe sur les valeurs
+   * env globales (`PLATFORM_FEE_FLAT` / `PLATFORM_FEE_PERCENT`).
+   */
+  computeFee(
+    amount: number,
+    sellerOverride?: { flat: number; percent: number },
+  ): { fee: number; net: number } {
+    const flat = sellerOverride?.flat ?? this.feeFlat;
+    const percent = sellerOverride?.percent ?? this.feePercent;
+    return computeFee(amount, flat, percent);
   }
 
   async getOrCreateBalance(
@@ -134,7 +144,12 @@ export class BalanceService {
     const provider: ChargeProvider =
       link.paymentMethodUsed ?? tx.paymentMethod ?? 'WAVE';
 
-    const { fee, net } = this.computeFee(link.amount);
+    // Frais plateforme : on lit l'override admin du vendeur s'il existe,
+    // sinon on retombe sur les valeurs env globales. Le seller fetch ici
+    // est aussi réutilisé pour les notifications plus bas (pas de double
+    // round-trip).
+    const seller = await this.userModel.findById(link.sellerId).exec();
+    const { fee, net } = this.computeFee(link.amount, seller?.platformFee);
 
     // 1. Marquer le PaymentLink payé en premier — c'est le verrou d'idempotence.
     link.status = 'paid';
@@ -178,11 +193,9 @@ export class BalanceService {
     );
 
     // 5. Notifications WhatsApp non-bloquantes (vendeur + acheteur).
+    //    `seller` a déjà été chargé en haut pour la résolution des frais.
     try {
-      const [seller, order] = await Promise.all([
-        this.userModel.findById(link.sellerId).exec(),
-        this.orderModel.findById(link.orderId).exec(),
-      ]);
+      const order = await this.orderModel.findById(link.orderId).exec();
       const providerLabel = provider === 'WAVE' ? 'Wave' : 'Orange Money';
 
       // → Vendeur : récap complet pour identifier la commande sans ouvrir le dashboard.

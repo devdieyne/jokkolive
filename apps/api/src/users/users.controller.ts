@@ -12,6 +12,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePlatformFeeDto } from './dto/update-platform-fee.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -46,5 +47,23 @@ export class UsersController {
   @HttpCode(204)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+
+  /**
+   * Override admin des frais plateforme pour ce vendeur. Si non défini,
+   * le vendeur utilise les valeurs env globales (PLATFORM_FEE_FLAT/PERCENT).
+   */
+  @Patch(':id/platform-fee')
+  setPlatformFee(
+    @Param('id') id: string,
+    @Body() dto: UpdatePlatformFeeDto,
+  ) {
+    return this.usersService.setPlatformFee(id, dto);
+  }
+
+  /** Reset l'override → retour aux valeurs env globales. */
+  @Delete(':id/platform-fee')
+  clearPlatformFee(@Param('id') id: string) {
+    return this.usersService.clearPlatformFee(id);
   }
 }

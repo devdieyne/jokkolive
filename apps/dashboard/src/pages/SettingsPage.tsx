@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Copy, ExternalLink, LogOut, Share2, Wallet } from 'lucide-react';
+import {
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  LogOut,
+  Music2,
+  Share2,
+  Wallet,
+  Zap,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getMe, updateCurrency, updatePayoutAccounts } from '../api/client';
+import {
+  getMe,
+  updateAutoPayout,
+  updateCurrency,
+  updatePayoutAccounts,
+} from '../api/client';
 import { SUPPORTED_CURRENCIES, type Currency } from '../types';
 import { Input } from '../components/ui/Input';
 import { Avatar } from '../components/ui/Avatar';
@@ -149,6 +163,9 @@ export function SettingsPage() {
         {/* Comptes de retrait */}
         <PayoutAccountsCard />
 
+        {/* Retrait automatique */}
+        <AutoPayoutCard />
+
         {/* Compte */}
         <Card noPadding>
           <CardHeader
@@ -264,26 +281,32 @@ function ShareProfileCard() {
           </div>
         </div>
 
-        {/* Lien wa.me direct */}
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Lien WhatsApp direct
+        {/* Lien wa.me direct — à coller dans la bio TikTok / Insta */}
+        <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4">
+          <div className="flex items-center gap-2">
+            <Music2 className="h-4 w-4 text-emerald-700" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              Lien pour ta bio TikTok / Instagram
+            </p>
+          </div>
+          <p className="mt-1.5 text-xs text-slate-600">
+            Colle ce lien dans la bio de tes réseaux. Quand un viewer clique
+            depuis ton live, WhatsApp s'ouvre déjà avec{' '}
+            <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-slate-700">
+              @{user.pseudo}:
+            </code>{' '}
+            pré-rempli — il n'a qu'à taper le code que tu dictes en live.
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Ouvre WhatsApp avec ton préfix prêt — l'acheteur n'a qu'à taper le
-            code produit.
-          </p>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <code className="flex-1 truncate rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <code className="flex-1 truncate rounded-lg border border-emerald-200 bg-white px-3 py-2 font-mono text-xs text-slate-700">
               {link}
             </code>
             <div className="flex gap-2">
               <Button
-                variant="secondary"
                 onClick={() => void handleCopy(link, 'link')}
                 leftIcon={<Copy className="h-4 w-4" />}
               >
-                {copied === 'link' ? 'Copié' : 'Copier'}
+                {copied === 'link' ? 'Copié ✓' : 'Copier le lien'}
               </Button>
               <Button
                 variant="secondary"
@@ -440,6 +463,114 @@ function PayoutAccountsCard() {
             Enregistrer
           </Button>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * Toggle "Retrait automatique" : à chaque paiement reçu, l'API tente un
+ * virement immédiat vers le compte mobile money correspondant au provider
+ * du paiement (Wave → wave.mobile, OM → orangeMoney.mobile).
+ *
+ * En cas d'échec PSP, le solde reste disponible et le vendeur reçoit un
+ * message WhatsApp lui disant de retirer manuellement.
+ */
+function AutoPayoutCard() {
+  const { user, refreshAuth } = useAuth();
+  const [enabled, setEnabled] = useState<boolean>(
+    user?.autoPayoutEnabled ?? false,
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Sync depuis le context
+  useEffect(() => {
+    setEnabled(user?.autoPayoutEnabled ?? false);
+  }, [user?.autoPayoutEnabled]);
+
+  if (!user) return null;
+
+  const hasAnyAccount =
+    !!user.payoutAccounts?.wave?.mobile ||
+    !!user.payoutAccounts?.orangeMoney?.mobile;
+
+  const handleToggle = async () => {
+    const next = !enabled;
+    setError('');
+    setEnabled(next); // optimistic
+    setSaving(true);
+    try {
+      await updateAutoPayout(next);
+      const me = await getMe();
+      refreshAuth(me.access_token, me.user);
+    } catch (err) {
+      setEnabled(!next); // rollback optimistic
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card noPadding>
+      <CardHeader
+        title="Retrait automatique"
+        description="À chaque paiement reçu, l'argent est viré directement sur votre compte mobile money correspondant (Wave ou Orange Money)."
+      />
+      <div className="space-y-3 px-5 py-5">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+            <Zap className="h-5 w-5 text-emerald-700" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900">
+              {enabled ? 'Activé' : 'Désactivé'}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+              {enabled
+                ? 'Vous recevez vos paiements automatiquement. Si un virement échoue, vous serez notifié sur WhatsApp et l\'argent restera disponible pour retrait manuel.'
+                : "Les paiements restent dans votre solde. Vous devez initier les retraits manuellement depuis le portefeuille."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label="Activer le retrait automatique"
+            disabled={saving}
+            onClick={() => void handleToggle()}
+            className={`relative mt-1 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+              enabled ? 'bg-emerald-600' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                enabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {!hasAnyAccount && enabled && (
+          <div
+            role="alert"
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800"
+          >
+            ⚠️ Vous n'avez configuré aucun compte mobile money. Activez-en au
+            moins un (Wave ou Orange Money) ci-dessus pour que le retrait
+            automatique fonctionne.
+          </div>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700"
+          >
+            {error}
+          </div>
+        )}
       </div>
     </Card>
   );

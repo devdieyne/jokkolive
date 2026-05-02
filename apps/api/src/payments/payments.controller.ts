@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InitiateCheckoutDto } from './dto/initiate-checkout.dto';
 import { RequestPayoutDto } from './dto/request-payout.dto';
 import { UpdatePayoutAccountsDto } from './dto/update-payout-accounts.dto';
+import { UpdateAutoPayoutDto } from './dto/update-auto-payout.dto';
 import type { ChargeProvider } from './providers/payment-provider.interface';
 
 interface AuthRequest {
@@ -136,5 +137,23 @@ export class PaymentsController {
       dto,
     );
     return { payoutAccounts: user.payoutAccounts ?? {} };
+  }
+
+  /**
+   * Active/désactive le retrait automatique. Quand activé, à chaque paiement
+   * reçu l'API tente un transfert immédiat vers le compte mobile money
+   * correspondant au provider du paiement.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/auto-payout')
+  async updateAutoPayout(
+    @Request() req: AuthRequest,
+    @Body() dto: UpdateAutoPayoutDto,
+  ) {
+    const user = await this.paymentsService.updateAutoPayoutEnabled(
+      req.user.id,
+      dto.enabled,
+    );
+    return { autoPayoutEnabled: user.autoPayoutEnabled };
   }
 }

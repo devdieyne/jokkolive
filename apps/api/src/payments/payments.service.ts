@@ -207,4 +207,15 @@ export class PaymentsService {
     await user.save();
     return user;
   }
+
+  async updateAutoPayoutEnabled(
+    userId: string,
+    enabled: boolean,
+  ): Promise<UserDocument> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+    user.autoPayoutEnabled = enabled;
+    await user.save();
+    return user;
+  }
 }

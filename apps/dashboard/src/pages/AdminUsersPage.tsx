@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
-import { getUsers, createUser, updateUser, deleteUser } from '../api/client';
+import { Pencil, Percent, Plus, Trash2, UserPlus } from 'lucide-react';
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  setUserPlatformFee,
+  clearUserPlatformFee,
+} from '../api/client';
 import { SUPPORTED_CURRENCIES, type Currency, type UserRecord } from '../types';
 import { PhoneInput } from '../components/PhoneInput';
 import { Avatar } from '../components/ui/Avatar';
@@ -22,7 +29,22 @@ interface UserFormData {
   role: 'admin' | 'seller';
   currency: Currency;
   disabled: boolean;
+  /**
+   * Frais plateforme (admin override). `useDefaultFee=true` → l'API utilise
+   * les valeurs env globales (PLATFORM_FEE_FLAT/PERCENT). Sinon on envoie
+   * le couple (feeFlat, feePercentDisplay/100).
+   * Les inputs sont des strings pour cohabiter avec l'utilisateur qui peut
+   * vider le champ pendant la saisie sans casser le state.
+   */
+  useDefaultFee: boolean;
+  feeFlat: string;
+  feePercentDisplay: string;
 }
+
+// Valeurs par défaut affichées en placeholder. Doivent matcher les env
+// PLATFORM_FEE_FLAT / PLATFORM_FEE_PERCENT côté API (cf. .env.example).
+const DEFAULT_FEE_FLAT_HINT = '50';
+const DEFAULT_FEE_PERCENT_HINT = '2';
 
 const emptyForm: UserFormData = {
   phone: '+221',
@@ -31,6 +53,9 @@ const emptyForm: UserFormData = {
   role: 'seller',
   currency: 'XOF',
   disabled: false,
+  useDefaultFee: true,
+  feeFlat: '',
+  feePercentDisplay: '',
 };
 
 export function AdminUsersPage() {
@@ -62,6 +87,12 @@ export function AdminUsersPage() {
       role: u.role,
       currency: u.currency,
       disabled: u.disabled,
+      useDefaultFee: !u.platformFee,
+      feeFlat: u.platformFee ? String(u.platformFee.flat) : '',
+      // Conversion décimal → % pour l'affichage (0.03 → "3")
+      feePercentDisplay: u.platformFee
+        ? String(+(u.platformFee.percent * 100).toFixed(4))
+        : '',
     });
     setError('');
     setShowForm(true);
@@ -72,12 +103,37 @@ export function AdminUsersPage() {
     setError('');
     try {
       if (editUser) {
-        await updateUser(editUser._id, {
+        await updateUser(editUser.id, {
           displayName: form.displayName,
           role: form.role,
           currency: form.currency,
           disabled: form.disabled,
         });
+
+        // Frais plateforme : compare l'état du form au state DB pour ne
+        // taper l'API que si quelque chose a changé.
+        const currentlyHasOverride = !!editUser.platformFee;
+        if (form.useDefaultFee && currentlyHasOverride) {
+          await clearUserPlatformFee(editUser.id);
+        } else if (!form.useDefaultFee) {
+          const flat = parseInt(form.feeFlat || '0', 10);
+          const percentNum = parseFloat(form.feePercentDisplay || '0');
+          if (
+            Number.isNaN(flat) ||
+            flat < 0 ||
+            Number.isNaN(percentNum) ||
+            percentNum < 0 ||
+            percentNum > 100
+          ) {
+            throw new Error(
+              'Frais invalides (flat ≥ 0 entier, % entre 0 et 100).',
+            );
+          }
+          // % → décimal (3 → 0.03), arrondi à 4 décimales pour éviter les
+          // float surprises type 0.030000000000000002.
+          const percent = +(percentNum / 100).toFixed(4);
+          await setUserPlatformFee(editUser.id, { flat, percent });
+        }
       } else {
         await createUser({
           phone: form.phone,
@@ -98,7 +154,7 @@ export function AdminUsersPage() {
 
   const handleDelete = async (u: UserRecord) => {
     if (!confirm(`Supprimer ${u.displayName} (@${u.pseudo}) ?`)) return;
-    await deleteUser(u._id);
+    await deleteUser(u.id);
     await qc.invalidateQueries({ queryKey: ['users'] });
   };
 
@@ -154,7 +210,7 @@ export function AdminUsersPage() {
             <tbody className="divide-y divide-slate-100">
               {users.map((u) => (
                 <tr
-                  key={u._id}
+                  key={u.id}
                   className={cn(
                     'transition-colors hover:bg-slate-50/60',
                     u.disabled && 'opacity-60',
@@ -220,7 +276,7 @@ export function AdminUsersPage() {
           <ul className="divide-y divide-slate-100 md:hidden">
             {users.map((u) => (
               <li
-                key={u._id}
+                key={u.id}
                 className={cn('px-4 py-4', u.disabled && 'opacity-60')}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -352,6 +408,72 @@ export function AdminUsersPage() {
               </option>
             ))}
           </Select>
+
+          {editUser && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50/50 px-3.5 py-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Percent className="h-4 w-4 text-slate-500" />
+                <p className="text-sm font-medium text-slate-700">
+                  Frais plateforme
+                </p>
+              </div>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.useDefaultFee}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, useDefaultFee: e.target.checked }))
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <span className="text-sm text-slate-700">
+                  Utiliser les valeurs par défaut
+                  <span className="block text-xs text-slate-500">
+                    Soit les frais env globaux ({DEFAULT_FEE_FLAT_HINT} XOF +{' '}
+                    {DEFAULT_FEE_PERCENT_HINT}%).
+                  </span>
+                </span>
+              </label>
+
+              {!form.useDefaultFee && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <Input
+                    label="Frais fixes"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    placeholder={DEFAULT_FEE_FLAT_HINT}
+                    rightAddon={<span className="text-xs">XOF</span>}
+                    value={form.feeFlat}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        feeFlat: e.target.value.replace(/[^0-9]/g, ''),
+                      }))
+                    }
+                  />
+                  <Input
+                    label="Pourcentage"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    placeholder={DEFAULT_FEE_PERCENT_HINT}
+                    rightAddon={<span className="text-xs">%</span>}
+                    value={form.feePercentDisplay}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        feePercentDisplay: e.target.value.replace(/[^0-9.]/g, ''),
+                      }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {editUser && (
             <label className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/50 px-3.5 py-3 cursor-pointer">
