@@ -64,7 +64,7 @@ export function OrdersPage() {
   );
 
   const handleStatus = async (o: Order, status: OrderStatus) => {
-    await updateOrder(o._id, { status });
+    await updateOrder(o.id, { status });
     await qc.invalidateQueries({ queryKey: ['orders', 'mine'] });
   };
 
@@ -138,7 +138,7 @@ export function OrdersPage() {
             const meta = STATUS_META[o.status];
             return (
               <article
-                key={o._id}
+                key={o.id}
                 className="rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-shadow hover:shadow-pop sm:p-5"
               >
                 <div className="flex items-start justify-between gap-3">

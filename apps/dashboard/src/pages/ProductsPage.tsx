@@ -51,13 +51,13 @@ export function ProductsPage() {
   const handleUpdateStock = async (p: Product) => {
     const n = Number(stockValue);
     if (isNaN(n) || n < 0) return;
-    await updateProduct(p._id, { stock: n });
+    await updateProduct(p.id, { stock: n });
     setEditingStock(null);
     await qc.invalidateQueries({ queryKey: ['products', 'mine'] });
   };
 
   const handleToggleDisabled = async (p: Product) => {
-    await updateProduct(p._id, { disabled: !p.disabled });
+    await updateProduct(p.id, { disabled: !p.disabled });
     await qc.invalidateQueries({ queryKey: ['products', 'mine'] });
   };
 
@@ -66,8 +66,8 @@ export function ProductsPage() {
     const command = `@${user.pseudo}:${p.code}`;
     try {
       await navigator.clipboard.writeText(command);
-      setCopied(p._id);
-      setTimeout(() => setCopied((c) => (c === p._id ? null : c)), 1800);
+      setCopied(p.id);
+      setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800);
     } catch {
       /* ignore */
     }
@@ -119,7 +119,7 @@ export function ProductsPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
             <article
-              key={p._id}
+              key={p.id}
               className={cn(
                 'group flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-card transition-shadow hover:shadow-pop',
                 p.disabled && 'opacity-70',
@@ -149,7 +149,7 @@ export function ProductsPage() {
 
               <div className="mt-3 flex items-center gap-2 text-xs">
                 <span className="text-slate-500">Stock :</span>
-                {editingStock?._id === p._id ? (
+                {editingStock?.id === p.id ? (
                   <span className="flex items-center gap-1">
                     <input
                       type="number"
@@ -186,14 +186,14 @@ export function ProductsPage() {
                   size="sm"
                   onClick={() => void handleCopyCommand(p)}
                   leftIcon={
-                    copied === p._id ? (
+                    copied === p.id ? (
                       <Check className="h-3.5 w-3.5" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )
                   }
                 >
-                  {copied === p._id ? 'Copié' : 'Copier'}
+                  {copied === p.id ? 'Copié' : 'Copier'}
                 </Button>
                 <Button
                   size="sm"
@@ -230,7 +230,7 @@ export function ProductsPage() {
                   )}
                 </button>
                 <button
-                  onClick={() => void handleDelete(p._id)}
+                  onClick={() => void handleDelete(p.id)}
                   className="inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

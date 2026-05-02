@@ -19,10 +19,16 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-xl border border-slate-200 bg-white shadow-card',
+        // Mobile : section "edge to edge" comme une grouped list iOS — pas
+        // de bordure horizontale, pas de coin arrondi sur les côtés, pas
+        // d'ombre. Les sections sont séparées par les filets horizontaux
+        // (border-y) et l'espacement vertical du parent.
+        'border-y border-slate-200 bg-white',
+        // Desktop (sm+) : on retrouve la card classique flottante.
+        'sm:rounded-xl sm:border sm:shadow-card',
         !noPadding && 'p-5',
         interactive &&
-          'transition-shadow hover:shadow-pop hover:border-slate-300',
+          'transition-all active:bg-slate-50 sm:hover:shadow-pop sm:hover:border-slate-300',
         className,
       )}
       {...rest}

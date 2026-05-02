@@ -24,10 +24,12 @@ const VARIANTS: Record<Variant, string> = {
     'bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800 disabled:bg-rose-600/60 focus-visible:ring-rose-500/30',
 };
 
+// Cibles tactiles ≥ 44px (Apple HIG) sur mobile : md=44px, lg=48px.
+// Sur desktop on revient à des hauteurs plus compactes pour densité info.
 const SIZES: Record<Size, string> = {
   sm: 'h-8 px-3 text-xs',
-  md: 'h-10 px-4 text-sm',
-  lg: 'h-11 px-5 text-sm',
+  md: 'h-11 px-4 text-sm sm:h-10',
+  lg: 'h-12 px-5 text-sm sm:h-11',
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
@@ -52,9 +54,12 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
+        'inline-flex select-none items-center justify-center gap-2 rounded-lg font-medium transition-all',
+        // Feedback "tap" haptic-feel : le bouton se compresse légèrement
+        // sous le doigt comme dans une vraie app native.
+        'active:scale-[0.97]',
         'focus:outline-none focus-visible:ring-2',
-        'disabled:cursor-not-allowed',
+        'disabled:cursor-not-allowed disabled:active:scale-100',
         VARIANTS[variant],
         SIZES[size],
         fullWidth && 'w-full',

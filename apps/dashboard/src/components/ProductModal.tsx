@@ -32,7 +32,7 @@ export function ProductModal({ onClose, onCreated, product }: Props) {
     try {
       let saved: Product;
       if (isEdit) {
-        saved = await updateProduct(product._id, {
+        saved = await updateProduct(product.id, {
           name: name.trim(),
           price: Number(price),
           stock: Number(stock),

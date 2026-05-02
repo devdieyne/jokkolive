@@ -350,7 +350,7 @@ function TransactionsList({ items }: { items: BalanceTransaction[] }) {
               ? RotateCcw
               : ArrowUpCircle;
           return (
-            <li key={t._id} className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
+            <li key={t.id} className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
               <div
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-inset',
@@ -406,7 +406,7 @@ function PayoutsList({ items }: { items: Payout[] }) {
       <CardHeader title="Retraits" description="Demandes de retrait" />
       <ul className="divide-y divide-slate-100">
         {items.map((p) => (
-          <li key={p._id} className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
+          <li key={p.id} className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
             <PayoutStatusIcon status={p.status} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-slate-900">

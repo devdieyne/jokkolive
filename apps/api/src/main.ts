@@ -1,3 +1,10 @@
+// IMPORTANT : ce side-effect import doit rester EN PREMIER. Il enregistre
+// le plugin Mongoose qui transforme `_id`→`id` et masque `__v` sur toutes
+// les réponses JSON. Doit être chargé AVANT AppModule (sinon les schemas
+// compilés via SchemaFactory.createForClass au moment de l'import des
+// modules ne récupéreraient pas le plugin).
+import './common/mongoose-id-transform';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,11 +16,37 @@ async function bootstrap() {
   // pour vérifier la signature HMAC du webhook Meta WhatsApp Cloud API.
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
 
   app.use(helmet());
 
-  const corsOrigin = configService.get<string>('cors.origin') ?? '*';
-  app.enableCors({ origin: corsOrigin });
+  // CORS : en prod on EXIGE une origine explicite — sinon on bloque pour
+  // ne pas exposer l'API à n'importe quel domaine.
+  const isProd =
+    (configService.get<string>('nodeEnv') ?? 'development') === 'production';
+  const corsOrigin = configService.get<string>('cors.origin');
+  if (isProd && (!corsOrigin || corsOrigin === '*')) {
+    throw new Error(
+      'CORS_ORIGIN must be set to a specific domain in production (refus du wildcard `*`).',
+    );
+  }
+  app.enableCors({ origin: corsOrigin ?? '*' });
+
+  // Webhooks en prod : si secrets manquants → un attaquant peut forger des
+  // événements (faux paiements, faux messages WhatsApp). On log loud pour
+  // que ça soit immédiatement visible dans les dashboards.
+  if (isProd) {
+    if (!configService.get<string>('WHATSAPP_CLOUD_APP_SECRET')) {
+      logger.warn(
+        '⚠️  WHATSAPP_CLOUD_APP_SECRET vide en PROD — la signature HMAC du webhook Cloud n\'est PAS vérifiée. À configurer avant tout trafic réel.',
+      );
+    }
+    if (!configService.get<string>('WAHA_WEBHOOK_TOKEN')) {
+      logger.warn(
+        '⚠️  WAHA_WEBHOOK_TOKEN vide en PROD — le webhook WAHA accepte n\'importe quelle requête. À configurer.',
+      );
+    }
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -26,7 +59,7 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
   await app.listen(port);
 
-  Logger.log(`🚀 App running on http://localhost:${port}`, 'Bootstrap');
+  logger.log(`🚀 App running on http://localhost:${port}`);
 }
 
 bootstrap();

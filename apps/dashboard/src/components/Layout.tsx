@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
+  LineChart,
   LogOut,
   Package,
   Receipt,
@@ -39,7 +40,10 @@ export function Layout() {
     { to: '/wallet', label: 'Portefeuille', icon: Wallet },
     { to: '/settings', label: 'Réglages', icon: Settings },
     ...(isAdmin
-      ? [{ to: '/admin/users', label: 'Utilisateurs', icon: Users }]
+      ? [
+          { to: '/admin/users', label: 'Utilisateurs', icon: Users },
+          { to: '/admin/revenue', label: 'Bénéfices', icon: LineChart },
+        ]
       : []),
   ];
 
@@ -68,16 +72,22 @@ export function Layout() {
 
   const mobileTabClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition-colors',
-      isActive
-        ? 'text-emerald-700'
-        : 'text-slate-500 hover:text-slate-900 active:bg-slate-100',
+      // Cibles tactiles 56px de haut (>= Apple HIG 44px et Material 48px),
+      // typo plus lisible, feedback "tap" via active:scale.
+      'flex h-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition-all',
+      'active:scale-95 active:bg-slate-100',
+      isActive ? 'text-emerald-700' : 'text-slate-500',
     );
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top bar */}
-      <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
+      {/* Top bar — sticky, respecte le notch iOS via safe-area-inset-top.
+          Sur mobile, la barre s'étend visuellement sous le status bar grâce
+          au padding-top dynamique, donnant un look "edge to edge" natif. */}
+      <nav
+        className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:h-16 sm:px-6">
           <Logo size="sm" />
 
@@ -153,18 +163,22 @@ export function Layout() {
         </div>
       </nav>
 
-      {/* Main */}
-      <main className="mx-auto max-w-7xl px-4 py-5 pb-24 sm:px-6 sm:py-8 md:pb-8">
+      {/* Main — full-bleed sur mobile (px-0) pour permettre aux Cards de
+          s'étendre bord à bord façon iOS grouped list. Padding latéral
+          rétabli en sm+ pour le look web classique. */}
+      <main className="mx-auto max-w-7xl space-y-4 px-0 py-4 pb-28 sm:space-y-6 sm:px-6 sm:py-8 sm:pb-8">
         <Outlet />
       </main>
 
-      {/* Bottom nav (mobile only) */}
+      {/* Bottom nav (mobile only) — items 56px de haut, icônes 24px,
+          padding home-bar safe-area, bordure plus marquée pour ancrer
+          la barre au bas de l'écran comme une vraie tab bar iOS. */}
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Navigation principale"
       >
-        <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1.5">
+        <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1">
           {items.map((it) => {
             const Icon = it.icon;
             return (
@@ -178,7 +192,7 @@ export function Layout() {
                   <>
                     <Icon
                       className={cn(
-                        'h-5 w-5 transition-colors',
+                        'h-6 w-6 transition-colors',
                         isActive ? 'text-emerald-600' : 'text-slate-500',
                       )}
                       strokeWidth={isActive ? 2.25 : 2}

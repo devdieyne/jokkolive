@@ -2,15 +2,36 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover : permet à l'app PWA de dessiner sous le notch et
+         la home bar iOS — combiné avec safe-area-inset-* en CSS, donne le
+         look "edge to edge" des vraies apps. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
     <meta name="theme-color" content="#059669" />
+    <meta name="color-scheme" content="light" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Le manifest PWA est injecté automatiquement par vite-plugin-pwa
+         lors du build (pas de <link rel="manifest"> statique ici). -->
+
+
+    <!-- iOS PWA : quand l'app est ajoutée à l'écran d'accueil, ces meta la
+         font ressembler à une app native (pas de barre Safari).
+         status-bar-style=default → iOS réserve la place de la status bar et
+         affiche son texte normalement (noir sur fond clair). À NE PAS mettre
+         en `black-translucent` sans un header sombre prévu pour : sinon le
+         contenu de l'app dessine SOUS la status bar et chevauche. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="JokkoLive" />
+    <meta name="format-detection" content="telephone=no" />
 
     <!-- Identity -->
     <title>JokkoLive — Vendez sur WhatsApp</title>

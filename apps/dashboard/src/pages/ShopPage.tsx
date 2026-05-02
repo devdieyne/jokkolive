@@ -143,7 +143,7 @@ export function ShopPage() {
 
                 return (
                   <article
-                    key={p._id}
+                    key={p.id}
                     className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-card transition-shadow hover:shadow-pop"
                   >
                     <div className="mb-3 flex items-start justify-between gap-2">

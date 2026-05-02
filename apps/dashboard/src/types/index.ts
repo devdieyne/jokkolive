@@ -24,6 +24,8 @@ export interface AppUser {
     wave?: { mobile: string };
     orangeMoney?: { mobile: string };
   };
+  /** Retrait automatique : à chaque paiement, transfert immédiat vers le mobile money. */
+  autoPayoutEnabled?: boolean;
   share?: {
     whatsappNumber: string;
     prefilledMessage: string;
@@ -32,7 +34,7 @@ export interface AppUser {
 }
 
 export interface UserRecord {
-  _id: string;
+  id: string;
   phone: string;
   pseudo: string;
   displayName: string;
@@ -40,10 +42,20 @@ export interface UserRecord {
   currency: Currency;
   disabled: boolean;
   createdAt: string;
+  /**
+   * Override admin des frais plateforme. Si absent, le vendeur utilise les
+   * valeurs env globales (PLATFORM_FEE_FLAT / PLATFORM_FEE_PERCENT).
+   * - flat : FCFA entier
+   * - percent : décimal entre 0 et 1 (0.03 = 3%)
+   */
+  platformFee?: {
+    flat: number;
+    percent: number;
+  };
 }
 
 export interface Product {
-  _id: string;
+  id: string;
   sellerId: string;
   name: string;
   prefix: string;
@@ -62,7 +74,7 @@ export interface Product {
 export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'expired';
 
 export interface Order {
-  _id: string;
+  id: string;
   reference: string;
   sellerId: string;
   productId: string;
@@ -101,7 +113,7 @@ export interface SellerBalance {
 }
 
 export interface BalanceTransaction {
-  _id: string;
+  id: string;
   sellerId: string;
   provider: PayoutProvider;
   type: 'credit' | 'debit' | 'reverse';
@@ -115,7 +127,7 @@ export interface BalanceTransaction {
 }
 
 export interface Payout {
-  _id: string;
+  id: string;
   sellerId: string;
   provider: PayoutProvider;
   amount: number;

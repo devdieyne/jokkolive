@@ -55,19 +55,17 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 // ── Auth (OTP via WhatsApp) ───────────────────────────────────────────────────
+// Note : l'inscription publique est désactivée — un compte ne peut être créé
+// que par un admin via createUser() (POST /users). Pas d'API register() ici.
 
-export const register = (data: {
-  phone: string;
-  pseudo: string;
-  displayName: string;
-}) =>
-  req<{ phone: string; sent: boolean }>('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+export interface OtpFallback {
+  whatsappNumber: string;
+  link: string;
+  prefilledMessage: string;
+}
 
 export const requestOtp = (phone: string) =>
-  req<{ sent: boolean }>('/auth/request-otp', {
+  req<{ sent: boolean; fallback?: OtpFallback }>('/auth/request-otp', {
     method: 'POST',
     body: JSON.stringify({ phone }),
   });
@@ -76,6 +74,17 @@ export const verifyOtp = (phone: string, code: string) =>
   req<AuthResponse>('/auth/verify-otp', {
     method: 'POST',
     body: JSON.stringify({ phone, code }),
+  });
+
+// ── Auth (Magic Link via WhatsApp user-initiated) ────────────────────────────
+// Inscription publique désactivée → le magic link sert UNIQUEMENT à se
+// connecter à un compte existant. Si le user envoie "LOGIN" sur WhatsApp
+// sans compte, le webhook répond "contactez l'admin" et n'émet pas de lien.
+
+export const verifyMagicLink = (token: string) =>
+  req<AuthResponse>('/auth/magic/verify', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
   });
 
 export const getMe = () => req<AuthResponse>('/auth/me');
@@ -114,6 +123,45 @@ export const updateUser = (
 
 export const deleteUser = (id: string) =>
   req<void>(`/users/${id}`, { method: 'DELETE' });
+
+/** Admin : override des frais plateforme pour un vendeur. */
+export const setUserPlatformFee = (
+  id: string,
+  data: { flat: number; percent: number },
+) =>
+  req<UserRecord>(`/users/${id}/platform-fee`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+/** Admin : reset → retour aux frais env globaux. */
+export const clearUserPlatformFee = (id: string) =>
+  req<UserRecord>(`/users/${id}/platform-fee`, { method: 'DELETE' });
+
+// ── Admin stats ──────────────────────────────────────────────────────────────
+
+export interface RevenueBucket {
+  totalFee: number;
+  totalGross: number;
+  count: number;
+}
+
+export interface AdminRevenue {
+  allTime: RevenueBucket;
+  last30d: RevenueBucket;
+  last7d: RevenueBucket;
+  today: RevenueBucket;
+  topSellers: Array<{
+    sellerId: string;
+    pseudo: string;
+    displayName: string;
+    totalFee: number;
+    count: number;
+  }>;
+}
+
+export const getAdminRevenue = () =>
+  req<AdminRevenue>('/admin/stats/revenue');
 
 // ── Products ─────────────────────────────────────────────────────────────────
 
@@ -208,6 +256,12 @@ export const updatePayoutAccounts = (data: {
   req<{ payoutAccounts: AppUser['payoutAccounts'] }>('/me/payout-accounts', {
     method: 'PATCH',
     body: JSON.stringify(data),
+  });
+
+export const updateAutoPayout = (enabled: boolean) =>
+  req<{ autoPayoutEnabled: boolean }>('/me/auto-payout', {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled }),
   });
 
 // ── Catalogue public ─────────────────────────────────────────────────────────
