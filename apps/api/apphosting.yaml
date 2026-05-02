@@ -42,7 +42,7 @@ env:
   - variable: PUBLIC_BASE_URL
     value: https://api.jokkolive.com
   - variable: FRONTEND_URL
-    value: https://jokkolive.com
+    value: https://app.jokkolive.com
 
   # ── Meta WhatsApp Business Cloud API ───────────────────────────────────────
   - variable: WHATSAPP_CLOUD_GRAPH_VERSION
