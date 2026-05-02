@@ -40,7 +40,7 @@ env:
   - variable: CORS_ORIGIN
     value: https://app.jokkolive.com
   - variable: PUBLIC_BASE_URL
-    value: https://app.jokkolive.com
+    value: https://api.jokkolive.com
   - variable: FRONTEND_URL
     value: https://app.jokkolive.com
 
