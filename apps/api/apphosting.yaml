@@ -1,0 +1,81 @@
+# Firebase App Hosting — JokkoLive API (NestJS)
+# https://firebase.google.com/docs/app-hosting/configure
+#
+# Le rootDirectory de App Hosting doit pointer sur `apps/api`.
+# Les valeurs `secret: NOM` font référence à des secrets dans Google Secret
+# Manager — à créer une fois dans la console GCP avant le premier deploy :
+#   gcloud secrets create MONGO_URI --data-file=- <<< "mongodb+srv://..."
+#   etc.
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 4
+  minInstances: 0
+  concurrency: 80
+
+env:
+  # ── Runtime ────────────────────────────────────────────────────────────────
+  # NODE_ENV=production UNIQUEMENT au runtime — au build, on a besoin des
+  # devDependencies (TypeScript, NestCLI, @types/*) pour `nest build`.
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - RUNTIME
+
+  - variable: PORT
+    value: "8080"
+
+  # ── MongoDB (Atlas en prod) ────────────────────────────────────────────────
+  - variable: MONGO_URI
+    secret: MONGO_URI
+  - variable: MONGO_DB_NAME
+    secret: MONGO_DB_NAME
+
+  # ── Auth ───────────────────────────────────────────────────────────────────
+  - variable: JWT_SECRET
+    secret: JWT_SECRET
+
+  # ── URLs publiques ─────────────────────────────────────────────────────────
+  - variable: CORS_ORIGIN
+    value: https://jokkolive.com
+  - variable: PUBLIC_BASE_URL
+    value: https://api.jokkolive.com
+  - variable: FRONTEND_URL
+    value: https://jokkolive.com
+
+  # ── Meta WhatsApp Business Cloud API ───────────────────────────────────────
+  - variable: WHATSAPP_CLOUD_GRAPH_VERSION
+    value: v21.0
+  - variable: WHATSAPP_CLOUD_PHONE_NUMBER_ID
+    secret: WHATSAPP_CLOUD_PHONE_NUMBER_ID
+  - variable: WHATSAPP_CLOUD_WABA_ID
+    secret: WHATSAPP_CLOUD_WABA_ID
+  - variable: WHATSAPP_CLOUD_TOKEN
+    secret: WHATSAPP_CLOUD_TOKEN
+  - variable: WHATSAPP_CLOUD_APP_SECRET
+    secret: WHATSAPP_CLOUD_APP_SECRET
+  - variable: WHATSAPP_CLOUD_VERIFY_TOKEN
+    secret: WHATSAPP_CLOUD_VERIFY_TOKEN
+  - variable: WHATSAPP_BUSINESS_NUMBER
+    value: "+221776583181"
+
+  # ── Admin par défaut (créé au boot si absent) ─────────────────────────────
+  - variable: ADMIN_PHONE
+    value: "+221776583181"
+  - variable: ADMIN_PSEUDO
+    value: admin
+
+  # ── DiamanoPay (PSP mobile money) ──────────────────────────────────────────
+  - variable: DIAMANO_PAY_TOKEN
+    secret: DIAMANO_PAY_TOKEN
+  - variable: DIAMANO_PAY_BASE_URL
+    value: https://api.diamanopay.com
+  - variable: ACTIVE_PSP
+    value: diamanopay
+
+  # ── Frais plateforme par défaut (overridables par vendeur) ────────────────
+  - variable: PLATFORM_FEE_FLAT
+    value: "50"
+  - variable: PLATFORM_FEE_PERCENT
+    value: "0.02"

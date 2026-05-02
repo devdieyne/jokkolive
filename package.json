@@ -2,17 +2,12 @@
   "name": "tiktok-live-commerce",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
-  "dependencies": {
-    "class-transformer": "^0.5.0",
-    "class-validator": "^0.14.0"
-  },
+  "description": "Monorepo JokkoLive — apps/api (NestJS) + apps/dashboard (React/Vite). Chaque app gère ses propres deps (PAS de workspaces npm pour éviter le hoisting qui casse Firebase App Hosting / Cloud Run buildpacks).",
   "scripts": {
-    "api": "npm run start:dev --workspace=apps/api",
-    "dashboard": "npm run dev --workspace=apps/dashboard",
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspace=apps/api"
+    "api": "cd apps/api && npm run start:dev",
+    "dashboard": "cd apps/dashboard && npm run dev",
+    "build": "cd apps/api && npm run build && cd ../dashboard && npm run build",
+    "test": "cd apps/api && npm run test",
+    "install:all": "cd apps/api && npm install && cd ../dashboard && npm install"
   }
 }
