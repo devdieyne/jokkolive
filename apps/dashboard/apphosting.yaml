@@ -1,0 +1,28 @@
+# Firebase App Hosting — JokkoLive Dashboard (React + Vite, statique)
+# https://firebase.google.com/docs/app-hosting/configure
+#
+# Le rootDirectory de App Hosting doit pointer sur `apps/dashboard`.
+# Le buildpack Node :
+#   1. npm install
+#   2. npm run build (tsc + vite build)
+#   3. sert les fichiers statiques de dist/
+#
+# Vite embarque les variables `import.meta.env.VITE_*` dans le bundle JS
+# au moment du build → c'est pourquoi VITE_API_URL doit être en BUILD.
+# Au runtime il n'y a pas de process Node, juste un serveur de fichiers.
+
+runConfig:
+  cpu: 0.5
+  memoryMiB: 256
+  maxInstances: 4
+  minInstances: 0
+  concurrency: 100
+
+env:
+  # ── URL de l'API embarquée dans le bundle JS (build-time only) ─────────────
+  # Cette URL doit pointer vers le backend App Hosting (api.jokkolive.com).
+  # Si tu changes de domaine, refaire un déploiement pour rebuild le bundle.
+  - variable: VITE_API_URL
+    value: https://api.jokkolive.com
+    availability:
+      - BUILD
