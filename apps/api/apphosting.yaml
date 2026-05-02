@@ -58,7 +58,7 @@ env:
   - variable: WHATSAPP_CLOUD_VERIFY_TOKEN
     secret: WHATSAPP_CLOUD_VERIFY_TOKEN
   - variable: WHATSAPP_BUSINESS_NUMBER
-    value: "+221776583181"
+    value: "+221771429765"
 
   # ── Admin par défaut (créé au boot si absent) ─────────────────────────────
   - variable: ADMIN_PHONE
